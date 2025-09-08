@@ -1,5 +1,7 @@
 # Introduction
 
+![Coverage](https://img.shields.io/badge/Coverage-54.6%25-yellow)
+
 Cats demo REST API used to manage a local database of 🐈.
 
 ## Run locally
@@ -54,13 +56,26 @@ inspect ps stop rm rmi
 
 ## Testing
 
-The application includes comprehensive testing with 34 passing tests:
+The application includes comprehensive testing with **71 total tests** across multiple categories:
 
-- **Unit Tests** (7 tests): `go test ./test/unit/... -v`
+- **Unit Tests** (20+ tests): `go test ./test/unit/... -v`
 - **API Tests** (8 tests): `go test ./test/apitests/... -v`
-- **Mocked Tests** (19 tests): `go test ./test/mocked/... -v`
+- **Integration Tests** (3 tests): `go test ./test/integration/... -v`
+- **Mocked Tests** (2 tests): `go test ./test/mocked/... -v`
+- **Main Package Tests** (7 tests): `go test . -v`
+- **Plus additional sub-tests and variations**
+
+### Running Tests
 
 Run all tests: `go test ./test/... -v`
+
+### Test Coverage
+
+Generate coverage report: `go test -coverprofile=coverage.out ./... -coverpkg=./...`
+
+View coverage in browser: `go tool cover -html=coverage.out`
+
+Update coverage badge: `./update-coverage.sh`
 
 Test structure:
 
