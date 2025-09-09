@@ -1,8 +1,10 @@
 # Go Cats API
 
-![Coverage](https://img.shields.io/badge/Coverage-86.6%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-64.6%25-green)
+![CI/CD](https://img.shields.io/badge/CI%2FCD-Passing-brightgreen)
+![Go Version](https://img.shields.io/badge/Go-1.23-blue)
 
-A comprehensive REST API for managing cats 🐈 with full CRUD operations, built with Go.
+A comprehensive REST API for managing cats 🐈 with full CRUD operations, built with Go and enterprise-grade CI/CD pipeline.
 
 ## Quick Start
 
@@ -22,16 +24,19 @@ Browse the application:
 ## Project Structure
 
 ```text
-├── docs/              # Documentation and coverage reports
+├── .github/           # GitHub Actions CI/CD workflows
+├── docs/              # Documentation 
+├── scripts/           # Development and testing scripts
 ├── test/              # All test files organized by type
 │   ├── unit/          # Unit tests with mocks
 │   ├── integration/   # Integration tests
-│   ├── apitests/      # API endpoint tests
+│   ├── apitests/      # API endpoint tests (with build tags)
 │   └── mocked/        # Mocked component tests
-├── logs/              # Application logs
 ├── swagger-ui/        # Swagger UI assets
-├── *_test.go          # Main package tests (root level)
-└── *.go               # Go source files
+├── Dockerfile         # Multi-stage production Docker build
+├── docker-compose.yml # Development environment setup
+├── Makefile          # Development tasks and CI/CD commands
+└── *.go              # Go source files
 ```
 
 ## Development

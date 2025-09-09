@@ -1,6 +1,67 @@
+# =============================================================================
+# Go Cats API - Git Ignore File
+# =============================================================================
+
+# Build artifacts
 backend
+cats-api
+bin/
+dist/
+
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+coverage.out
+*-coverage.out
+docs/coverage.html
+docs/coverage.out
+
+# Go workspace file
+go.work
+
+# Dependencies
+vendor/
+
+# Logs
+*.log
 server.log
 logs/
-docs/coverage.out
-docs/coverage.html
-*.log
+
+# Environment variables
+.env
+.env.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Development files
+tmp/
+temp/
+*.tmp
+
+# Docker
+.docker/
+
+# CI/CD artifacts (these are generated)
+trivy-results.sarif
