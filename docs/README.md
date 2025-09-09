@@ -35,7 +35,7 @@ Open `docs/coverage.html` in your browser to see detailed coverage analysis.
 
 - **Total Coverage:** 86.6%
 - **Functions with 100% Coverage:** 9 functions
-- **Functions with Good Coverage:** 2 functions  
+- **Functions with Good Coverage:** 2 functions
 - **Functions with No Coverage:** 1 function (main - hard to test)
 
 ## Test Structure
@@ -44,7 +44,7 @@ Open `docs/coverage.html` in your browser to see detailed coverage analysis.
 Root directory:     # Main package tests (*_test.go files)
 test/
 ├── unit/           # Unit tests with mocks
-├── integration/    # Integration tests  
+├── integration/    # Integration tests
 ├── apitests/       # API endpoint tests
 └── mocked/         # Mocked component tests
 ```

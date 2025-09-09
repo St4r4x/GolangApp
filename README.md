@@ -77,7 +77,7 @@ inspect ps stop rm rmi
 The application features **86.6% test coverage** with comprehensive testing across multiple categories:
 
 - **Unit Tests:** Component isolation with mocks
-- **Integration Tests:** Real function testing  
+- **Integration Tests:** Real function testing
 - **API Tests:** End-to-end HTTP endpoint testing
 - **Mocked Tests:** Dependency injection testing
 
@@ -87,7 +87,7 @@ The application features **86.6% test coverage** with comprehensive testing acro
 # Run all tests
 make test
 
-# Generate coverage report  
+# Generate coverage report
 make coverage
 
 # Run specific test types

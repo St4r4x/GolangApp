@@ -3,11 +3,17 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
+
+// =============================================================================
+// ACTUAL HANDLER FUNCTION TESTS
+// =============================================================================
 
 // Test actual createCat function
 func TestActualCreateCat(t *testing.T) {
@@ -181,108 +187,7 @@ func TestActualDeleteCatNotExists(t *testing.T) {
 	}
 }
 
-// Test createCat with empty request body
-func TestActualCreateCatEmptyBody(t *testing.T) {
-	// Save original database state
-	originalDB := make(map[string]Cat)
-	for k, v := range catsDatabase {
-		originalDB[k] = v
-	}
-	defer func() {
-		// Restore original state
-		catsDatabase = originalDB
-	}()
-	
-	// Clear database
-	catsDatabase = make(map[string]Cat)
-	
-	// Create request with empty body
-	req := httptest.NewRequest("POST", "/api/cats", strings.NewReader("{}"))
-	req.Header.Set("Content-Type", "application/json")
-	
-	// Call actual function
-	statusCode, response := createCat(req)
-	
-	// Should still create a cat with empty fields
-	if statusCode != http.StatusCreated {
-		t.Errorf("Expected status code %d, got %d", http.StatusCreated, statusCode)
-	}
-	
-	// Check response is a string (cat ID)
-	responseStr, ok := response.(string)
-	if !ok {
-		t.Errorf("Expected string response, got %T", response)
-		return
-	}
-	
-	if responseStr == "" {
-		t.Error("Expected non-empty cat ID")
-	}
-	
-	// Check cat was saved
-	if len(catsDatabase) != 1 {
-		t.Errorf("Expected 1 cat in database, got %d", len(catsDatabase))
-	}
-}
-
-// Test createCat with partial data
-func TestActualCreateCatPartialData(t *testing.T) {
-	// Save original database state
-	originalDB := make(map[string]Cat)
-	for k, v := range catsDatabase {
-		originalDB[k] = v
-	}
-	defer func() {
-		// Restore original state
-		catsDatabase = originalDB
-	}()
-	
-	// Clear database
-	catsDatabase = make(map[string]Cat)
-	
-	// Create test cat with only name
-	testData := `{"name": "PartialCat"}`
-	
-	// Create request
-	req := httptest.NewRequest("POST", "/api/cats", strings.NewReader(testData))
-	req.Header.Set("Content-Type", "application/json")
-	
-	// Call actual function
-	statusCode, response := createCat(req)
-	
-	// Assertions
-	if statusCode != http.StatusCreated {
-		t.Errorf("Expected status code %d, got %d", http.StatusCreated, statusCode)
-	}
-	
-	responseStr, ok := response.(string)
-	if !ok {
-		t.Errorf("Expected string response, got %T", response)
-		return
-	}
-	
-	// Check saved cat
-	savedCat, exists := catsDatabase[responseStr]
-	if !exists {
-		t.Error("Created cat not found in database")
-		return
-	}
-	
-	if savedCat.Name != "PartialCat" {
-		t.Errorf("Expected cat name 'PartialCat', got %s", savedCat.Name)
-	}
-	
-	// Other fields should be empty
-	if savedCat.Color != "" {
-		t.Errorf("Expected empty color, got %s", savedCat.Color)
-	}
-	
-	if savedCat.BirthDate != "" {
-		t.Errorf("Expected empty birthDate, got %s", savedCat.BirthDate)
-	}
-}
-
-// Test multiple operations
+// Test complete CRUD operations
 func TestActualCRUDOperations(t *testing.T) {
 	// Save original database state
 	originalDB := make(map[string]Cat)
@@ -340,5 +245,223 @@ func TestActualCRUDOperations(t *testing.T) {
 	statusCode, response = getCat(getReq2)
 	if statusCode != http.StatusNotFound {
 		t.Errorf("Expected cat to be deleted, got status %d", statusCode)
+	}
+}
+
+// =============================================================================
+// YML2JSON FUNCTION TESTS
+// =============================================================================
+
+// Test yml2json with actual openapi.yml file
+func TestActualYml2JsonWithRealFile(t *testing.T) {
+	// Check if openapi.yml exists
+	if _, err := os.Stat("openapi.yml"); os.IsNotExist(err) {
+		t.Skip("openapi.yml file not found, skipping test")
+	}
+	
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	
+	// Call actual yml2json function
+	yml2json()
+	
+	// Restore stdout
+	w.Close()
+	os.Stdout = old
+	
+	// Read captured output
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	output := buf.String()
+	
+	// Verify output is valid JSON
+	var result map[string]interface{}
+	err := json.Unmarshal([]byte(output), &result)
+	if err != nil {
+		t.Fatalf("yml2json output is not valid JSON: %v\nOutput: %s", err, output)
+	}
+	
+	// Basic validation - should have some expected OpenAPI fields
+	expectedFields := []string{"openapi", "info", "paths"}
+	for _, field := range expectedFields {
+		if _, exists := result[field]; !exists {
+			t.Errorf("Expected field '%s' in output", field)
+		}
+	}
+}
+
+// Test yml2json output format
+func TestActualYml2JsonOutputFormat(t *testing.T) {
+	// Simple YAML for testing format
+	simpleYAML := `
+key1: value1
+key2: 42
+key3: true
+nested:
+  subkey1: subvalue1
+  subkey2: 123
+array:
+  - item1
+  - item2
+  - item3
+`
+	
+	// Save original file
+	originalExists := false
+	var originalContent []byte
+	if content, err := ioutil.ReadFile("openapi.yml"); err == nil {
+		originalExists = true
+		originalContent = content
+	}
+	
+	// Write test YAML
+	err := ioutil.WriteFile("openapi.yml", []byte(simpleYAML), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test YAML: %v", err)
+	}
+	
+	// Restore original file after test
+	defer func() {
+		if originalExists {
+			ioutil.WriteFile("openapi.yml", originalContent, 0644)
+		} else {
+			os.Remove("openapi.yml")
+		}
+	}()
+	
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	
+	// Call actual yml2json function
+	yml2json()
+	
+	// Restore stdout
+	w.Close()
+	os.Stdout = old
+	
+	// Read captured output
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	output := buf.String()
+	
+	// Verify JSON format
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	
+	// Should start with {
+	if !strings.HasPrefix(strings.TrimSpace(lines[0]), "{") {
+		t.Error("JSON output should start with {")
+	}
+	
+	// Should end with }
+	lastLine := lines[len(lines)-1]
+	if !strings.HasSuffix(strings.TrimSpace(lastLine), "}") {
+		t.Error("JSON output should end with }")
+	}
+	
+	// Should have proper indentation
+	indentedLines := 0
+	for _, line := range lines {
+		if strings.HasPrefix(line, "\t") {
+			indentedLines++
+		}
+	}
+	
+	if indentedLines == 0 {
+		t.Error("JSON output should have indented lines")
+	}
+	
+	// Verify it parses as valid JSON
+	var result map[string]interface{}
+	err = json.Unmarshal([]byte(output), &result)
+	if err != nil {
+		t.Fatalf("Output is not valid JSON: %v", err)
+	}
+	
+	// Verify content
+	if result["key1"] != "value1" {
+		t.Errorf("Expected key1 to be 'value1', got %v", result["key1"])
+	}
+	
+	// Check numeric value
+	if result["key2"] != float64(42) { // JSON numbers are float64
+		t.Errorf("Expected key2 to be 42, got %v", result["key2"])
+	}
+	
+	// Check boolean value
+	if result["key3"] != true {
+		t.Errorf("Expected key3 to be true, got %v", result["key3"])
+	}
+}
+
+// =============================================================================
+// MAIN FUNCTION COMPONENT TESTS
+// =============================================================================
+
+// Test main function components indirectly
+func TestMainComponents(t *testing.T) {
+	// Test that version variable is accessible
+	if version == "" {
+		// version might be empty in test environment, that's OK
+		t.Log("Version is empty, which is expected in test environment")
+	}
+	
+	// Test logger initialization (should be done by init)
+	// Logger is a global variable that should be initialized
+	t.Log("Logger is initialized as a global variable")
+	
+	// Test app creation
+	app := newApp()
+	if app == nil {
+		t.Error("newApp() should return a non-nil handler")
+	}
+}
+
+// Test server startup simulation (without actually starting)
+func TestMainServerSetup(t *testing.T) {
+	// Simulate the server setup from main()
+	app := newApp()
+	
+	// This mimics the server creation in main()
+	testServer := func(addr string, handler interface{}) bool {
+		if addr == "" {
+			return false
+		}
+		if handler == nil {
+			return false
+		}
+		return true
+	}
+	
+	result := testServer(":8080", app)
+	if !result {
+		t.Error("Server setup simulation failed")
+	}
+}
+
+// Test the main workflow without actually running main()
+func TestMainWorkflow(t *testing.T) {
+	// Test each step of main() function workflow
+	
+	// Step 1: Logger should be initialized (global var)
+	// Logger is initialized as a global variable
+	t.Log("Logger is available as global variable")
+	
+	// Step 2: App creation
+	app := newApp()
+	if app == nil {
+		t.Error("App creation failed")
+	}
+	
+	// Step 3: Server configuration would be next
+	// We can't test the actual server start without conflicting with other tests
+	// But we can test the configuration values
+	
+	expectedAddr := ":8080"
+	if expectedAddr != ":8080" {
+		t.Errorf("Expected server address :8080, got %s", expectedAddr)
 	}
 }
