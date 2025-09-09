@@ -70,7 +70,7 @@ test-integration: ## Run integration tests only
 
 test-api: ## Run API tests (requires running server)
 	@echo "$(BLUE)Running API tests...$(NC)"
-	go test -v ./test/apitests/...
+	go test -v -tags=integration ./test/apitests/...
 
 test-mocked: ## Run mocked tests only
 	@echo "$(BLUE)Running mocked tests...$(NC)"
@@ -81,12 +81,23 @@ test-main: ## Run main package tests only
 	go test -v .
 
 ##@ Coverage
-coverage: ## Generate comprehensive coverage report
-	@echo "$(BLUE)Generating coverage report...$(NC)"
-	go test -coverprofile=docs/coverage.out ./... -coverpkg=./...
+coverage: ## Generate comprehensive coverage report (excludes API tests)
+	@echo "$(BLUE)Generating coverage report (excluding API tests)...$(NC)"
+	@# Run tests excluding apitests to avoid connection issues
+	go test -coverprofile=docs/coverage.out \
+		./test/unit/... ./test/integration/... ./test/mocked/... . \
+		-coverpkg=./...
 	go tool cover -html=docs/coverage.out -o docs/coverage.html
 	@echo "$(GREEN)Coverage report generated: docs/coverage.html$(NC)"
 	go tool cover -func=docs/coverage.out | grep "total:"
+
+coverage-all: ## Generate coverage including API tests (requires running server)
+	@echo "$(BLUE)Generating full coverage report (including API tests)...$(NC)"
+	@echo "$(YELLOW)⚠️  This requires a running server on :8080$(NC)"
+	go test -coverprofile=docs/coverage-full.out ./... -coverpkg=./...
+	go tool cover -html=docs/coverage-full.out -o docs/coverage-full.html
+	@echo "$(GREEN)Full coverage report generated: docs/coverage-full.html$(NC)"
+	go tool cover -func=docs/coverage-full.out | grep "total:"
 
 coverage-unit: ## Generate unit test coverage
 	@echo "$(BLUE)Generating unit test coverage...$(NC)"

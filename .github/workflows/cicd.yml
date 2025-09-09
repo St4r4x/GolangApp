@@ -149,7 +149,10 @@ jobs:
       - name: Generate comprehensive coverage report
         run: |
           echo "## 📊 Generating Comprehensive Coverage Report" >> $GITHUB_STEP_SUMMARY
-          go test -coverprofile=coverage.out -v ./... -coverpkg=./...
+          echo "ℹ️ Excluding API tests from coverage (they run separately with live server)" >> $GITHUB_STEP_SUMMARY
+          go test -coverprofile=coverage.out -v \
+            ./test/unit/... ./test/integration/... ./test/mocked/... . \
+            -coverpkg=./...
           go tool cover -html=coverage.out -o coverage.html
           go tool cover -func=coverage.out | tail -1 | awk '{print "**Total Coverage:** " $3}' >> $GITHUB_STEP_SUMMARY
 
@@ -188,8 +191,10 @@ jobs:
             tag="pr-${{ github.event.number }}"
           fi
 
-          imageName="${{ env.REGISTRY }}/${{ github.repository }}:$version"
-          imageTag="${{ env.REGISTRY }}/${{ github.repository }}:$tag"
+          # Convert repository name to lowercase for Docker registry compatibility
+          repo_name=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          imageName="${{ env.REGISTRY }}/$repo_name:$version"
+          imageTag="${{ env.REGISTRY }}/$repo_name:$tag"
 
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "imageName=$imageName" >> $GITHUB_OUTPUT
@@ -221,11 +226,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Prepare repository name
+        id: repo
+        run: |
+          repo_name=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=$repo_name" >> $GITHUB_OUTPUT
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -283,12 +294,18 @@ jobs:
       - name: Wait for API to be ready
         run: |
           echo "## 🌐 Waiting for API to be ready..." >> $GITHUB_STEP_SUMMARY
-          for i in {1..30}; do
-            if curl -f http://localhost:8080/ > /dev/null 2>&1; then
-              echo "API is ready!"
+          for i in {1..60}; do
+            if curl -f -s http://localhost:8080/ > /dev/null 2>&1; then
+              echo "✅ API is ready after $i attempts!"
+              echo "- **API Status:** ✅ Ready" >> $GITHUB_STEP_SUMMARY
               break
             fi
-            echo "Waiting for API... (attempt $i/30)"
+            if [ $i -eq 60 ]; then
+              echo "❌ API failed to start after 60 attempts"
+              echo "- **API Status:** ❌ Failed to start" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+            echo "⏳ Waiting for API... (attempt $i/60)"
             sleep 2
           done
 
@@ -296,7 +313,7 @@ jobs:
         run: |
           echo "## 🌐 Running API Tests against ${{ needs.versioning.outputs.imageName }}" >> $GITHUB_STEP_SUMMARY
           if [ -d "./test/apitests" ]; then
-            go test -v ./test/apitests/... -coverprofile=api-coverage.out || echo "API tests failed"
+            go test -v -tags=integration ./test/apitests/... -coverprofile=api-coverage.out || echo "API tests failed"
           else
             echo "No API test directory found"
             touch api-coverage.out
