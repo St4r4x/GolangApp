@@ -5,17 +5,9 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
-
-// Get the project root directory
-func getProjectRoot() string {
-	_, filename, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(filename), "..", "..")
-}
 
 // Since we're testing functions from the main package, we need to import them
 // For now, we'll create mock structures that match the main package
@@ -33,10 +25,10 @@ var testCatsDatabase map[string]Cat
 func TestMain(m *testing.M) {
 	// Setup
 	testCatsDatabase = make(map[string]Cat)
-	
+
 	// Run tests
 	code := m.Run()
-	
+
 	// Cleanup
 	os.Exit(code)
 }
@@ -141,7 +133,7 @@ func TestCatJSON(t *testing.T) {
 func TestHTTPRequestPatterns(t *testing.T) {
 	// Test creating HTTP requests with JSON body
 	cat := Cat{Name: "HTTPTestCat", Color: "Purple"}
-	
+
 	jsonData, err := json.Marshal(cat)
 	if err != nil {
 		t.Fatalf("Failed to marshal cat: %v", err)
@@ -173,13 +165,13 @@ func TestHTTPRequestPatterns(t *testing.T) {
 // Test error handling for invalid JSON
 func TestInvalidJSONHandling(t *testing.T) {
 	invalidJSON := "{invalid json"
-	
+
 	req := httptest.NewRequest("POST", "/api/cats", strings.NewReader(invalidJSON))
 	req.Header.Set("Content-Type", "application/json")
 
 	var cat Cat
 	err := json.NewDecoder(req.Body).Decode(&cat)
-	
+
 	if err == nil {
 		t.Error("Expected error when decoding invalid JSON, but got none")
 	}
@@ -189,7 +181,7 @@ func TestInvalidJSONHandling(t *testing.T) {
 func TestPathParameterExtraction(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/cats/test-cat-id", nil)
 	req.SetPathValue("catId", "test-cat-id")
-	
+
 	catId := req.PathValue("catId")
 	if catId != "test-cat-id" {
 		t.Errorf("Expected catId 'test-cat-id', got '%s'", catId)
@@ -199,28 +191,28 @@ func TestPathParameterExtraction(t *testing.T) {
 // Test response recorder patterns
 func TestResponseRecorderPatterns(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	
+
 	// Test writing JSON response
 	cat := Cat{Name: "ResponseCat", ID: "resp-123"}
-	
+
 	recorder.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(recorder).Encode(cat)
-	
+
 	if recorder.Code != 200 {
 		t.Errorf("Expected status code 200, got %d", recorder.Code)
 	}
-	
+
 	if recorder.Header().Get("Content-Type") != "application/json" {
 		t.Errorf("Expected Content-Type application/json, got %s", recorder.Header().Get("Content-Type"))
 	}
-	
+
 	// Test reading response
 	var responseCat Cat
 	err := json.NewDecoder(recorder.Body).Decode(&responseCat)
 	if err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
-	
+
 	if responseCat.Name != cat.Name {
 		t.Errorf("Expected response cat name '%s', got '%s'", cat.Name, responseCat.Name)
 	}

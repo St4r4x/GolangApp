@@ -41,7 +41,7 @@ paths:
 	// Verify the JSON contains expected content
 	jsonStr := string(jsonData)
 	expectedFields := []string{"openapi", "info", "title", "Test API", "paths"}
-	
+
 	for _, field := range expectedFields {
 		if !contains(jsonStr, field) {
 			t.Errorf("JSON output should contain '%s', got: %s", field, jsonStr)
@@ -57,14 +57,14 @@ info:
   title: Cats API
   version: 1.0.0
 `
-	
+
 	// Create temp file
 	tmpFile, err := os.CreateTemp("", "test_openapi*.yml")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
 	defer os.Remove(tmpFile.Name())
-	
+
 	// Write test data
 	if _, err := tmpFile.Write([]byte(tempYAML)); err != nil {
 		t.Fatalf("Failed to write temp file: %v", err)
@@ -129,10 +129,10 @@ info:
 
 // Helper function to check if a string contains a substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
-		(len(s) > len(substr) && (s[:len(substr)] == substr || 
-		s[len(s)-len(substr):] == substr || 
-		containsInner(s, substr))))
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > len(substr) && (s[:len(substr)] == substr ||
+			s[len(s)-len(substr):] == substr ||
+			containsInner(s, substr))))
 }
 
 func containsInner(s, substr string) bool {

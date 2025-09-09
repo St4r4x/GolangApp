@@ -18,13 +18,13 @@ func TestMainFunctionConcepts(t *testing.T) {
 		{"Custom port", ":9000", ":9000"},
 		{"Localhost", "localhost:8080", "localhost:8080"},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			server := &http.Server{
 				Addr: tc.addr,
 			}
-			
+
 			if server.Addr != tc.expected {
 				t.Errorf("Expected addr %s, got %s", tc.expected, server.Addr)
 			}
@@ -41,20 +41,20 @@ func TestHTTPServerInitialization(t *testing.T) {
 			Handler: handler,
 		}
 	}
-	
+
 	// Create a simple test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("test"))
 	})
-	
+
 	// Test server creation
 	server := createServerMock(":8080", testHandler)
-	
+
 	if server.Addr != ":8080" {
 		t.Errorf("Expected server addr :8080, got %s", server.Addr)
 	}
-	
+
 	if server.Handler == nil {
 		t.Error("Server handler should not be nil")
 	}
@@ -68,17 +68,17 @@ func TestServerStartupConcept(t *testing.T) {
 		if addr == "" {
 			return http.ErrServerClosed
 		}
-		
+
 		// Simulate successful start (without actually starting)
 		return nil
 	}
-	
+
 	// Test valid address
 	err := serverStartMock(":8080")
 	if err != nil {
 		t.Errorf("Expected no error for valid address, got %v", err)
 	}
-	
+
 	// Test invalid address
 	err = serverStartMock("")
 	if err == nil {
@@ -95,13 +95,13 @@ func TestApplicationInitialization(t *testing.T) {
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		})
-		
+
 		// Simulate logReq middleware wrapper
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			mux.ServeHTTP(w, r)
 		})
 	}
-	
+
 	app := initAppMock()
 	if app == nil {
 		t.Error("App initialization should return a handler")
@@ -119,7 +119,7 @@ func TestServerConfiguration(t *testing.T) {
 		{"Development", ":3000", 10 * time.Second},
 		{"Test", ":8081", 5 * time.Second},
 	}
-	
+
 	for _, config := range configurations {
 		t.Run(config.name, func(t *testing.T) {
 			server := &http.Server{
@@ -127,11 +127,11 @@ func TestServerConfiguration(t *testing.T) {
 				ReadTimeout:  config.timeout,
 				WriteTimeout: config.timeout,
 			}
-			
+
 			if server.Addr != config.addr {
 				t.Errorf("Expected addr %s, got %s", config.addr, server.Addr)
 			}
-			
+
 			if server.ReadTimeout != config.timeout {
 				t.Errorf("Expected timeout %v, got %v", config.timeout, server.ReadTimeout)
 			}
@@ -149,13 +149,13 @@ func TestLoggingInitialization(t *testing.T) {
 			"timestamp": true,
 		}
 	}
-	
+
 	logger := initLoggerMock("0.0.0-local")
-	
+
 	if logger["version"] != "0.0.0-local" {
 		t.Errorf("Expected version '0.0.0-local', got %v", logger["version"])
 	}
-	
+
 	if logger["level"] != "info" {
 		t.Errorf("Expected level 'info', got %v", logger["level"])
 	}
@@ -169,7 +169,7 @@ func TestVersionHandling(t *testing.T) {
 		"2.1.0-beta",
 		"",
 	}
-	
+
 	for _, version := range versions {
 		t.Run("Version_"+version, func(t *testing.T) {
 			// Mock version usage pattern
@@ -179,9 +179,9 @@ func TestVersionHandling(t *testing.T) {
 				}
 				return v
 			}
-			
+
 			result := versionMock(version)
-			
+
 			if version == "" && result != "unknown" {
 				t.Errorf("Expected 'unknown' for empty version, got %s", result)
 			} else if version != "" && result != version {
@@ -200,13 +200,13 @@ func TestMainWorkflowSimulation(t *testing.T) {
 		if logger["initialized"] != true {
 			return http.ErrServerClosed
 		}
-		
+
 		// Step 2: Create app (mock)
 		app := http.NewServeMux()
 		if app == nil {
 			return http.ErrServerClosed
 		}
-		
+
 		// Step 3: Create server (mock)
 		server := &http.Server{
 			Addr:    ":8080",
@@ -215,11 +215,11 @@ func TestMainWorkflowSimulation(t *testing.T) {
 		if server.Addr == "" {
 			return http.ErrServerClosed
 		}
-		
+
 		// Step 4: Simulate successful setup
 		return nil
 	}
-	
+
 	err := mainWorkflowMock()
 	if err != nil {
 		t.Errorf("Main workflow simulation failed: %v", err)
@@ -233,18 +233,18 @@ func TestGracefulShutdownConcepts(t *testing.T) {
 		if server == nil {
 			return http.ErrServerClosed
 		}
-		
+
 		// Simulate graceful shutdown
 		return nil
 	}
-	
+
 	server := &http.Server{Addr: ":8080"}
-	
+
 	err := shutdownMock(server)
 	if err != nil {
 		t.Errorf("Expected successful shutdown, got error: %v", err)
 	}
-	
+
 	// Test with nil server
 	err = shutdownMock(nil)
 	if err == nil {
@@ -256,26 +256,26 @@ func TestGracefulShutdownConcepts(t *testing.T) {
 func TestServerAddressValidation(t *testing.T) {
 	validAddresses := []string{
 		":8080",
-		":80", 
+		":80",
 		":443",
 		"localhost:8080",
 		"0.0.0.0:8080",
 	}
-	
+
 	invalidAddresses := []string{
 		"",
 		"invalid",
 		":99999", // Port too high
 		":",
 	}
-	
+
 	validateAddressMock := func(addr string) bool {
 		if addr == "" || addr == ":" || addr == "invalid" || addr == ":99999" {
 			return false
 		}
 		return true
 	}
-	
+
 	// Test valid addresses
 	for _, addr := range validAddresses {
 		t.Run("Valid_"+addr, func(t *testing.T) {
@@ -284,7 +284,7 @@ func TestServerAddressValidation(t *testing.T) {
 			}
 		})
 	}
-	
+
 	// Test invalid addresses
 	for _, addr := range invalidAddresses {
 		t.Run("Invalid_"+addr, func(t *testing.T) {

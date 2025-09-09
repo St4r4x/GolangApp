@@ -3,14 +3,13 @@ package main
 import (
 	"encoding/json"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
 	"log"
 	"os"
 )
 
 func yml2json() {
 
-	yfile, err := ioutil.ReadFile("openapi.yml")
+	yfile, err := os.ReadFile("openapi.yml")
 
 	if err != nil {
 		log.Fatal(err)

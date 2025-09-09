@@ -117,7 +117,7 @@ func TestCRUDOperationsConcepts(t *testing.T) {
 	}
 	cats["test1"] = updatedCat
 
-	cat, _ = cats["test1"]
+	cat = cats["test1"]
 	catMap, _ = cat.(map[string]interface{})
 	if catMap["name"] != "UpdatedCat" {
 		t.Errorf("After update: expected name 'UpdatedCat', got %v", catMap["name"])
@@ -153,7 +153,7 @@ func TestURLPathParameterExtraction(t *testing.T) {
 		t.Run(test.path, func(t *testing.T) {
 			// Mock path parameter extraction
 			param := extractPathParam(test.path, "/cats/")
-			
+
 			if test.valid {
 				if param != test.expected {
 					t.Errorf("Expected param '%s', got '%s'", test.expected, param)
@@ -181,13 +181,13 @@ func extractPathParam(path, prefix string) string {
 	if len(path) <= len(prefix) {
 		return ""
 	}
-	
+
 	if path[:len(prefix)] != prefix {
 		return ""
 	}
-	
+
 	param := path[len(prefix):]
-	
+
 	// Extract until next slash
 	for i, char := range param {
 		if char == '/' {
@@ -195,6 +195,6 @@ func extractPathParam(path, prefix string) string {
 			break
 		}
 	}
-	
+
 	return param
 }

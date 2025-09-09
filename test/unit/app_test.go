@@ -9,7 +9,7 @@ import (
 func TestMakeHandlerFunc(t *testing.T) {
 	// Test the handler function wrapper
 	// Since makeHandlerFunc is unexported, we'll test the concept
-	
+
 	// Create a simple test handler
 	testHandler := func(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusOK)
@@ -41,9 +41,9 @@ func TestMakeHandlerFunc(t *testing.T) {
 func TestLogReqFunctionality(t *testing.T) {
 	// Test logging middleware concept
 	// Since logReq is unexported, we'll test the middleware pattern
-	
+
 	var loggedMethod, loggedPath string
-	
+
 	// Mock logging function
 	mockLogReq := func(req *http.Request) {
 		loggedMethod = req.Method
@@ -93,14 +93,14 @@ func TestLogReqFunctionality(t *testing.T) {
 func TestNewAppConcept(t *testing.T) {
 	// Test the app creation concept
 	// Since newApp is unexported, we'll test the mux pattern it likely uses
-	
+
 	mux := http.NewServeMux()
-	
+
 	// Test that we can add routes like the real newApp function does
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("home"))
 	})
-	
+
 	mux.HandleFunc("/cats", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("cats"))
 	})

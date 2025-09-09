@@ -109,7 +109,7 @@ func TestCreateCatInvalidData(t *testing.T) {
 	code := 0
 	var response string
 	call("POST", "/cats", invalidCat, &code, &response)
-	
+
 	fmt.Println("POST /cats (invalid) ->", code, response)
 
 	// Note: Current implementation doesn't validate required fields
@@ -183,7 +183,7 @@ func TestDeleteCat(t *testing.T) {
 
 	// Now delete the cat
 	deleteCode := 0
-	err = call("DELETE", "/cats/"+catId, nil, &deleteCode, nil)
+	_ = call("DELETE", "/cats/"+catId, nil, &deleteCode, nil)
 
 	fmt.Println("DELETE /cats/"+catId+" ->", deleteCode)
 
@@ -222,7 +222,7 @@ func TestDeleteCatNotFound(t *testing.T) {
 
 func TestCRUDWorkflow(t *testing.T) {
 	// Test complete CRUD workflow
-	
+
 	// 1. Create a cat
 	newCat := &CatModel{
 		Name:      "WorkflowCat",

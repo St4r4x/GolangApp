@@ -20,12 +20,6 @@ func TestInitLogging(t *testing.T) {
 	t.Log("Logger initialization test completed successfully")
 }
 
-// Helper function to access the logger (we'll add this to main package)
-func getLogger() interface{} {
-	// This will be implemented by adding a getter in the main package
-	return nil // placeholder
-}
-
 func TestLoggerNotNil(t *testing.T) {
 	// Test that the global Logger variable is not nil
 	// This indirectly tests that initLogging() worked correctly

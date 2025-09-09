@@ -29,17 +29,17 @@ func TestCreateCatValid(t *testing.T) {
 		Color:     "Orange",
 		BirthDate: "2023-01-01",
 	}
-	
+
 	// Convert to JSON
 	jsonData, err := json.Marshal(testCat)
 	if err != nil {
 		t.Fatalf("Failed to marshal test cat: %v", err)
 	}
-	
+
 	// Create HTTP request
 	req := httptest.NewRequest("POST", "/api/cats", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	// Create a mock createCat function since we can't directly call the main package function
 	// This tests the logic pattern
 	createCatMock := func(req *http.Request) (int, any) {
@@ -49,21 +49,21 @@ func TestCreateCatValid(t *testing.T) {
 		if err != nil {
 			return http.StatusBadRequest, "Invalid JSON input"
 		}
-		
+
 		// Mock UUID generation
 		catCreationData.ID = "mock-uuid-123"
-		
+
 		return http.StatusCreated, catCreationData.ID
 	}
-	
+
 	// Test the function
 	statusCode, response := createCatMock(req)
-	
+
 	// Assertions
 	if statusCode != http.StatusCreated {
 		t.Errorf("Expected status code %d, got %d", http.StatusCreated, statusCode)
 	}
-	
+
 	if response != "mock-uuid-123" {
 		t.Errorf("Expected response 'mock-uuid-123', got %v", response)
 	}
@@ -73,11 +73,11 @@ func TestCreateCatValid(t *testing.T) {
 func TestCreateCatInvalidJSON(t *testing.T) {
 	// Create invalid JSON
 	invalidJSON := "{ invalid json }"
-	
+
 	// Create HTTP request
 	req := httptest.NewRequest("POST", "/api/cats", strings.NewReader(invalidJSON))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	// Mock createCat function
 	createCatMock := func(req *http.Request) (int, any) {
 		decoder := json.NewDecoder(req.Body)
@@ -86,19 +86,19 @@ func TestCreateCatInvalidJSON(t *testing.T) {
 		if err != nil {
 			return http.StatusBadRequest, "Invalid JSON input"
 		}
-		
+
 		catCreationData.ID = "mock-uuid-123"
 		return http.StatusCreated, catCreationData.ID
 	}
-	
+
 	// Test the function
 	statusCode, response := createCatMock(req)
-	
+
 	// Assertions
 	if statusCode != http.StatusBadRequest {
 		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, statusCode)
 	}
-	
+
 	if response != "Invalid JSON input" {
 		t.Errorf("Expected response 'Invalid JSON input', got %v", response)
 	}
@@ -110,35 +110,35 @@ func TestDeleteCatExists(t *testing.T) {
 	mockDB := map[string]TestCat{
 		"test-id-123": {Name: "TestCat", ID: "test-id-123"},
 	}
-	
+
 	// Create HTTP request with path parameter
 	req := httptest.NewRequest("DELETE", "/api/cats/test-id-123", nil)
-	
+
 	// Mock the PathValue function behavior
 	deleteCatMock := func(req *http.Request) (int, any) {
 		catID := "test-id-123" // Mock PathValue extraction
-		
+
 		_, catExists := mockDB[catID]
 		if !catExists {
 			return http.StatusNotFound, "Cat not found"
 		}
-		
+
 		delete(mockDB, catID)
 		return http.StatusNoContent, nil
 	}
-	
+
 	// Test the function
 	statusCode, response := deleteCatMock(req)
-	
+
 	// Assertions
 	if statusCode != http.StatusNoContent {
 		t.Errorf("Expected status code %d, got %d", http.StatusNoContent, statusCode)
 	}
-	
+
 	if response != nil {
 		t.Errorf("Expected nil response, got %v", response)
 	}
-	
+
 	// Verify cat was deleted from mock database
 	if _, exists := mockDB["test-id-123"]; exists {
 		t.Error("Cat should have been deleted from database")
@@ -149,31 +149,31 @@ func TestDeleteCatExists(t *testing.T) {
 func TestDeleteCatNotExists(t *testing.T) {
 	// Mock empty database
 	mockDB := map[string]TestCat{}
-	
+
 	// Create HTTP request
 	req := httptest.NewRequest("DELETE", "/api/cats/non-existent-id", nil)
-	
+
 	// Mock deleteCat function
 	deleteCatMock := func(req *http.Request) (int, any) {
 		catID := "non-existent-id" // Mock PathValue extraction
-		
+
 		_, catExists := mockDB[catID]
 		if !catExists {
 			return http.StatusNotFound, "Cat not found"
 		}
-		
+
 		delete(mockDB, catID)
 		return http.StatusNoContent, nil
 	}
-	
+
 	// Test the function
 	statusCode, response := deleteCatMock(req)
-	
+
 	// Assertions
 	if statusCode != http.StatusNotFound {
 		t.Errorf("Expected status code %d, got %d", http.StatusNotFound, statusCode)
 	}
-	
+
 	if response != "Cat not found" {
 		t.Errorf("Expected response 'Cat not found', got %v", response)
 	}
@@ -187,20 +187,20 @@ func TestCatJSONHandling(t *testing.T) {
 		BirthDate: "2023-01-01",
 		Color:     "White",
 	}
-	
+
 	// Marshal to JSON
 	jsonData, err := json.Marshal(originalCat)
 	if err != nil {
 		t.Fatalf("Failed to marshal cat: %v", err)
 	}
-	
+
 	// Unmarshal back
 	var unmarshaled TestCat
 	err = json.Unmarshal(jsonData, &unmarshaled)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal cat: %v", err)
 	}
-	
+
 	// Compare
 	if originalCat.Name != unmarshaled.Name {
 		t.Errorf("Name mismatch: expected %s, got %s", originalCat.Name, unmarshaled.Name)
@@ -243,12 +243,12 @@ func TestCreateCatEdgeCases(t *testing.T) {
 			expectedMsg:    "",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest("POST", "/api/cats", strings.NewReader(tc.input))
 			req.Header.Set("Content-Type", "application/json")
-			
+
 			createCatMock := func(req *http.Request) (int, any) {
 				decoder := json.NewDecoder(req.Body)
 				var catCreationData TestCat
@@ -256,13 +256,13 @@ func TestCreateCatEdgeCases(t *testing.T) {
 				if err != nil {
 					return http.StatusBadRequest, "Invalid JSON input"
 				}
-				
+
 				catCreationData.ID = "mock-uuid"
 				return http.StatusCreated, catCreationData.ID
 			}
-			
+
 			statusCode, _ := createCatMock(req)
-			
+
 			if statusCode != tc.expectedStatus {
 				t.Errorf("Expected status code %d, got %d", tc.expectedStatus, statusCode)
 			}

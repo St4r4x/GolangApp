@@ -21,7 +21,7 @@ func getProjectRoot() string {
 func TestRealHomeHandler(t *testing.T) {
 	// Start the actual application in background and test it
 	root := getProjectRoot()
-	
+
 	// Build the application
 	cmd := exec.Command("go", "build", "-o", "testapp", ".")
 	cmd.Dir = root
@@ -67,11 +67,11 @@ func TestRealHomeHandler(t *testing.T) {
 func TestYml2JsonWithRealFile(t *testing.T) {
 	// Test the actual yml2json function with the real openapi.yml file
 	root := getProjectRoot()
-	
+
 	// Change to project directory
 	originalDir, _ := os.Getwd()
 	defer os.Chdir(originalDir)
-	
+
 	err := os.Chdir(root)
 	if err != nil {
 		t.Fatalf("Failed to change directory: %v", err)
@@ -147,7 +147,7 @@ func main() {
 func TestAPIEndpointsIntegration(t *testing.T) {
 	// This test requires the app to be running
 	// We'll test the concept with a simple HTTP client
-	
+
 	tests := []struct {
 		endpoint string
 		method   string
