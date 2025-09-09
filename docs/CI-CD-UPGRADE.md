@@ -5,6 +5,7 @@
 ### 1. Enhanced GitHub Actions CI/CD Pipeline (`.github/workflows/cicd.yml`)
 
 #### **Multi-Stage Pipeline**
+
 - **Lint & Format**: Code quality checks with go vet, staticcheck, gofmt
 - **Unit Tests**: Comprehensive test suite execution with coverage reporting
 - **Integration Tests**: End-to-end functionality testing
@@ -15,6 +16,7 @@
 - **Deployment Ready**: Final validation and deployment preparation
 
 #### **Key Features**
+
 - ✅ Parallel job execution for faster builds
 - ✅ Smart versioning based on git branches
 - ✅ Multi-platform Docker builds
@@ -27,6 +29,7 @@
 ### 2. Advanced Multi-Stage Dockerfile
 
 #### **Production Runtime** (Target: `runtime`)
+
 ```dockerfile
 # Optimized for production with minimal attack surface
 FROM scratch AS runtime
@@ -37,7 +40,8 @@ FROM scratch AS runtime
 # - Static asset management
 ```
 
-#### **Development Environment** (Target: `development`) 
+#### **Development Environment** (Target: `development`)
+
 ```dockerfile
 # Hot reload development environment
 FROM golang:1.23-alpine AS development
@@ -47,6 +51,7 @@ FROM golang:1.23-alpine AS development
 ```
 
 #### **Security & Optimization Features**
+
 - ✅ Multi-stage builds for minimal image size
 - ✅ Non-root user execution
 - ✅ Security scanning integration
@@ -58,29 +63,33 @@ FROM golang:1.23-alpine AS development
 ### 3. Comprehensive Docker Compose Setup
 
 #### **Development Services**
+
 ```yaml
-api-dev:        # Hot reload development
-api-prod:       # Production simulation
-api-test:       # Automated testing
+api-dev: # Hot reload development
+api-prod: # Production simulation
+api-test: # Automated testing
 ```
 
 #### **Optional Services** (Profiles)
+
 ```yaml
-prometheus:     # Metrics collection
-grafana:        # Monitoring dashboards
-postgres:       # Database option
-redis:          # Caching option
+prometheus: # Metrics collection
+grafana: # Monitoring dashboards
+postgres: # Database option
+redis: # Caching option
 ```
 
 ### 4. Enhanced Makefile with 25+ Commands
 
 #### **Development Commands**
+
 - `make dev-setup` - Set up development environment
 - `make dev` - Start development server with hot reload
 - `make run` - Run the application locally
 - `make build` - Build optimized binary
 
 #### **Testing Commands**
+
 - `make test` - Run all tests
 - `make test-unit` - Unit tests only
 - `make test-integration` - Integration tests only
@@ -88,18 +97,21 @@ redis:          # Caching option
 - `make coverage` - Generate coverage reports
 
 #### **Docker Commands**
+
 - `make docker-build` - Build production Docker image
 - `make docker-build-dev` - Build development image
 - `make compose-up` - Start Docker Compose services
 - `make compose-up-prod` - Start production environment
 
 #### **CI/CD Commands**
+
 - `make ci-local` - Run full CI pipeline locally
 - `make pre-commit` - Pre-commit validation checks
 
 ### 5. Comprehensive Testing Infrastructure
 
 #### **Test Script** (`scripts/test-all.sh`)
+
 - 🔍 Static analysis (go vet, staticcheck, gofmt)
 - 🧪 Unit tests with coverage
 - 🔗 Integration tests
@@ -109,10 +121,11 @@ redis:          # Caching option
 - 🐳 Docker build/run testing
 
 #### **Test Organization**
+
 ```
 test/
 ├── unit/           # Unit tests with mocks
-├── integration/    # Integration tests  
+├── integration/    # Integration tests
 ├── apitests/       # API endpoint tests
 ├── mocked/         # Mocked component tests
 └── test.http       # Manual API testing
@@ -121,11 +134,13 @@ test/
 ### 6. Development Tools & Configuration
 
 #### **Hot Reload** (`.air.toml`)
+
 - Automatic rebuild on code changes
 - Configurable file watching
 - Development-optimized build settings
 
 #### **Docker Optimization** (`.dockerignore`)
+
 - Optimized build context
 - Security-focused exclusions
 - Faster build times
@@ -133,10 +148,12 @@ test/
 ### 7. GitHub Templates & Documentation
 
 #### **Issue Templates**
+
 - Bug report template with testing checklist
 - Feature request template with implementation details
 
 #### **Pull Request Template**
+
 - Comprehensive PR checklist
 - Testing requirements
 - Documentation guidelines
@@ -152,17 +169,20 @@ test/
 ## 🐳 Docker Capabilities
 
 ### **Build Targets**
+
 1. **runtime** - Production-ready minimal image
 2. **development** - Development environment with hot reload
 3. **distroless-runtime** - Alternative secure runtime (Google Distroless)
 
 ### **Security Features**
+
 - Non-root user execution
 - Minimal attack surface (scratch base)
 - Security scanning integration
 - Read-only filesystem options
 
 ### **Performance Features**
+
 - Multi-stage builds for size optimization
 - Layer caching for faster builds
 - Multi-platform support
@@ -171,23 +191,27 @@ test/
 ## 🚀 CI/CD Pipeline Features
 
 ### **Triggers**
+
 - Push to main/master/develop branches
 - Pull requests to main branches
 - Manual workflow dispatch
 
 ### **Parallel Execution**
+
 - Lint & format checks
 - Multiple test suites
 - Coverage analysis
 - Docker builds
 
 ### **Artifact Management**
+
 - Coverage reports
 - Test results
 - Docker images
 - Security scan results
 
 ### **Security & Quality**
+
 - Static code analysis
 - Vulnerability scanning
 - Code formatting validation
@@ -196,6 +220,7 @@ test/
 ## 📋 Usage Examples
 
 ### **Local Development**
+
 ```bash
 # Set up environment
 make dev-setup
@@ -208,6 +233,7 @@ make ci-local
 ```
 
 ### **Docker Development**
+
 ```bash
 # Start development environment
 docker-compose up api-dev
@@ -220,6 +246,7 @@ docker-compose up api-test
 ```
 
 ### **Production Deployment**
+
 ```bash
 # Build production image
 make docker-build

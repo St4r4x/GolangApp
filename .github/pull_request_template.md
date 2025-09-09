@@ -15,7 +15,7 @@ Brief description of the changes.
 ### 🧪 Testing
 
 - [ ] Unit tests pass locally
-- [ ] Integration tests pass locally  
+- [ ] Integration tests pass locally
 - [ ] API tests pass locally
 - [ ] New tests added for new functionality
 - [ ] Coverage maintained or improved
