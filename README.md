@@ -25,7 +25,7 @@ Browse the application:
 
 ```text
 ├── .github/           # GitHub Actions CI/CD workflows
-├── docs/              # Documentation 
+├── docs/              # Documentation
 ├── scripts/           # Development and testing scripts
 ├── test/              # All test files organized by type
 │   ├── unit/          # Unit tests with mocks

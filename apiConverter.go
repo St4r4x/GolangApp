@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"gopkg.in/yaml.v3"
 	"log"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 func yml2json() {

@@ -7,13 +7,15 @@ This comprehensive guide covers common issues and their solutions for the Go Cat
 ### 1. Static Analysis Errors
 
 **Issue**: `staticcheck` fails with deprecated imports or code quality issues
+
 ```bash
 SA1019: Package io/ioutil is deprecated
-SA4006: unused variable 
+SA4006: unused variable
 U1000: unused function
 ```
 
-**Solution**: 
+**Solution**:
+
 - Replace `io/ioutil` with `os` package functions
 - Use underscore assignment for intentionally unused variables: `_, err := http.Get(...)`
 - Remove unused functions and variables
@@ -21,12 +23,14 @@ U1000: unused function
 ### 2. Formatting Errors
 
 **Issue**: `gofmt` check fails
+
 ```bash
 Code is not formatted. Please run 'go fmt ./...'
 test/apitests/all_test.go
 ```
 
 **Solution**:
+
 ```bash
 go fmt ./...
 ```
@@ -36,19 +40,22 @@ go fmt ./...
 ### 3. Coverage Analysis Connection Issues
 
 **Issue**: API tests fail during coverage with "connection refused"
+
 ```bash
 dial tcp [::1]:8080: connect: connection refused
 coverage: 10.3% of statements
 ```
 
 **Solution**: API tests are isolated with build tags and run separately in CI/CD
-- Local coverage excludes API tests: `make coverage` 
+
+- Local coverage excludes API tests: `make coverage`
 - CI/CD runs API tests with live Docker service
 - Coverage maintains ~65% without connection issues
 
 ### 4. Docker Repository Name Issues
 
 **Issue**: Docker build fails with uppercase repository names
+
 ```bash
 ERROR: repository name must be lowercase
 ```
@@ -58,13 +65,15 @@ ERROR: repository name must be lowercase
 ### 5. Docker Service Health Check Failures
 
 **Issue**: GitHub Actions services fail health checks
+
 ```bash
 Service container backend failed.
 backend service is starting, waiting 32 seconds...
 unhealthy
 ```
 
-**Solution**: 
+**Solution**:
+
 - Removed problematic health check from scratch containers
 - Enhanced API readiness detection with 3-minute timeout
 - Added comprehensive logging and debugging
@@ -72,12 +81,14 @@ unhealthy
 ### 6. Security Scan Upload Issues
 
 **Issue**: SARIF upload fails due to permissions
+
 ```bash
 Warning: Resource not accessible by integration
 Error: Resource not accessible by integration
 ```
 
 **Solution**:
+
 - Added proper workflow permissions for `security-events: write`
 - Implemented fallback artifact upload
 - Made security scan non-blocking with `continue-on-error`
@@ -85,6 +96,7 @@ Error: Resource not accessible by integration
 ## 🔧 Quick Fixes
 
 ### Format and Lint
+
 ```bash
 # Fix formatting
 go fmt ./...
@@ -97,6 +109,7 @@ gofmt -s -l .
 ```
 
 ### Coverage Analysis
+
 ```bash
 # Local coverage (excludes API tests)
 make coverage
@@ -106,6 +119,7 @@ make coverage-all
 ```
 
 ### Docker Testing
+
 ```bash
 # Build production image
 docker build --target runtime -t cats-api:test .
@@ -116,6 +130,7 @@ curl http://localhost:8080/
 ```
 
 ### Development Setup
+
 ```bash
 # Install development tools
 make dev-setup
