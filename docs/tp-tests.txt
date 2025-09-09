@@ -81,22 +81,57 @@ Use the provided HTTP file for manual testing:
 - Focus: All handler functions, API converter, core business logic
 
 ## Continuous Integration
+
+### Quick CI Commands
+```bash
+# Run comprehensive CI pipeline locally
+make ci-local
+
+# Run pre-commit checks
+make pre-commit
+
+# Run comprehensive test script
+./scripts/test-all.sh
+```
+
+### Manual CI/CD Pipeline Steps
 Add to your CI/CD pipeline:
 ```bash
-# Run all tests
-go test -v ./...
+# Static analysis
+go fmt ./...
+go vet ./...
+staticcheck ./...
+
+# Run all test suites
+go test -v ./test/unit/...
+go test -v ./test/integration/...
+go test -v ./test/mocked/...
+go test -v .
 
 # Generate coverage report
-go test -coverprofile=coverage.out ./...
+go test -coverprofile=coverage.out ./... -coverpkg=./...
 go tool cover -func coverage.out
 
 # API tests (requires server startup)
 go run . &
 SERVER_PID=$!
-sleep 2
+sleep 5
 go test -v ./test/apitests/...
 kill $SERVER_PID
+
+# Build and test
+go build -o bin/cats-api .
+docker build -t cats-api .
 ```
+
+### GitHub Actions
+The project includes a comprehensive GitHub Actions CI/CD pipeline that:
+- Runs linting and formatting checks
+- Executes all test suites in parallel
+- Generates coverage reports
+- Builds and pushes Docker images
+- Performs security scans
+- Runs API tests against the built container
 
 ## Troubleshooting
 - If API tests fail, ensure server is running on port 8080

@@ -1,0 +1,179 @@
+# Docker Compose for Go Cats API Development & Testing
+version: '3.8'
+
+services:
+  # =============================================================================
+  # Development Environment
+  # =============================================================================
+  api-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: cats-api-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - go-mod-cache:/go/pkg/mod
+    environment:
+      - GO_ENV=development
+      - LOG_LEVEL=debug
+    networks:
+      - cats-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # =============================================================================
+  # Production Environment
+  # =============================================================================
+  api-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        VERSION: ${VERSION:-latest}
+        BUILD_TIME: ${BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
+    container_name: cats-api-prod
+    ports:
+      - "8080:8080"
+    environment:
+      - GO_ENV=production
+      - LOG_LEVEL=info
+    networks:
+      - cats-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
+
+  # =============================================================================
+  # Testing Environment
+  # =============================================================================
+  api-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: cats-api-test
+    ports:
+      - "8081:8080"
+    volumes:
+      - .:/app
+      - go-mod-cache:/go/pkg/mod
+    environment:
+      - GO_ENV=test
+      - LOG_LEVEL=debug
+    networks:
+      - cats-network
+    command: >
+      sh -c "
+        echo 'Running comprehensive test suite...' &&
+        go test -v ./... -coverprofile=coverage.out -coverpkg=./... &&
+        go tool cover -html=coverage.out -o docs/coverage.html &&
+        echo 'Tests completed. Starting API server...' &&
+        go run .
+      "
+
+  # =============================================================================
+  # Monitoring & Observability (Optional)
+  # =============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cats-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - cats-network
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cats-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - cats-network
+    profiles:
+      - monitoring
+
+  # =============================================================================
+  # Database (If needed for future development)
+  # =============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: cats-postgres
+    environment:
+      POSTGRES_DB: cats_api
+      POSTGRES_USER: cats_user
+      POSTGRES_PASSWORD: cats_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - cats-network
+    profiles:
+      - database
+
+  redis:
+    image: redis:7-alpine
+    container_name: cats-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - cats-network
+    profiles:
+      - cache
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  cats-network:
+    driver: bridge
+    name: cats-api-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  go-mod-cache:
+    name: cats-go-mod-cache
+  postgres-data:
+    name: cats-postgres-data
+  redis-data:
+    name: cats-redis-data
+  grafana-storage:
+    name: cats-grafana-storage

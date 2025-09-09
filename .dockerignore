@@ -1,0 +1,58 @@
+# =============================================================================
+# Docker Ignore File
+# Optimizes Docker build context and improves security
+# =============================================================================
+
+# Development files
+.git/
+.github/
+.gitignore
+README.md
+*.md
+
+# Test files and coverage reports
+test/
+*_test.go
+coverage.out
+*-coverage.out
+docs/coverage.html
+
+# Development tools
+.air.toml
+.vscode/
+.idea/
+
+# Logs and temporary files
+logs/
+tmp/
+*.log
+
+# Build artifacts
+bin/
+backend
+
+# Docker files (not needed in build context)
+docker-compose.yml
+Dockerfile*
+
+# CI/CD files
+.github/
+Makefile
+
+# Go specific (commented out as we need these for Docker build)
+# *.mod
+# *.sum
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.local
+.env.*.local
