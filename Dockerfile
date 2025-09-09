@@ -79,9 +79,8 @@ COPY --from=builder /build/openapi.yml /openapi.yml
 # Use non-root user
 USER appuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["/backend", "-health-check"] || exit 1
+# Note: No health check in scratch container due to lack of tools
+# GitHub Actions services will check port availability instead
 
 # Expose port
 EXPOSE 8080
