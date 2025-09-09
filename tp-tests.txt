@@ -1,0 +1,54 @@
+# Test Commands for Go Cat API Application
+
+## Unit Tests Command
+# Run all unit tests with coverage
+go test -v -cover ./test/unit/
+
+## API Tests Command  
+# Note: Server must be running on localhost:8080 before running API tests
+# Start server in background: go run . &
+# Then run API tests: 
+go test -v ./test/apitests/
+
+## Comprehensive Test Suite Command
+# Run all tests with coverage report
+go test -coverprofile=coverage.out ./... -coverpkg=./... && go tool cover -func=coverage.out
+
+## Integration Tests Command
+go test -v ./test/integration/
+
+## Mocked Tests Command  
+go test -v ./test/mocked/
+
+## Coverage Report Generation
+# Generate HTML coverage report
+go test -coverprofile=coverage.out ./... -coverpkg=./... && go tool cover -html=coverage.out -o coverage.html
+
+## Key Functions Identified for Coverage (from analysis):
+# Functions with 0% coverage that need tests:
+# - createCat (allCatsHandlers.go)         - 0.0% coverage
+# - deleteCat (allCatsHandlers.go)         - 0.0% coverage  
+# - yml2json (apiConverter.go)             - 0.0% coverage
+# - main (main.go)                         - 0.0% coverage
+
+# Functions with partial coverage that need improvement:
+# - makeHandlerFunc (app.go)               - 72.7% coverage
+# - getCat (oneCatHandlers.go)             - 71.4% coverage
+
+# Functions with full coverage (good):
+# - listMapKeys (allCatsHandlers.go)       - 100.0% coverage
+# - listCats (allCatsHandlers.go)          - 100.0% coverage
+# - logReq (app.go)                        - 100.0% coverage
+# - newApp (app.go)                        - 100.0% coverage
+# - getHomeHandler (homeHandler.go)        - 100.0% coverage
+# - initLogging (logger.go)                - 100.0% coverage
+
+## API Endpoints Tested Successfully:
+# ✓ GET /                     - Home page (200 OK)
+# ✓ GET /api/cats             - List all cats (200 OK)  
+# ✓ POST /api/cats            - Create cat (201 Created)
+# ✓ GET /api/cats/{id}        - Get specific cat (200 OK)
+# ✓ DELETE /api/cats/{id}     - Delete cat (204 No Content)
+# ✓ GET /swagger/             - Swagger UI (200 OK)
+
+## Current Test Coverage: 54.6% total coverage
