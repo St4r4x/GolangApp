@@ -1,2 +1,6 @@
 backend
 server.log
+logs/
+docs/coverage.out
+docs/coverage.html
+*.log

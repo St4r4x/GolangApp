@@ -10,19 +10,29 @@ go test -v -cover ./test/unit/
 # Then run API tests: 
 go test -v ./test/apitests/
 
-## Comprehensive Test Suite Command
-# Run all tests with coverage report
-go test -coverprofile=coverage.out ./... -coverpkg=./... && go tool cover -func=coverage.out
+## Main Package Tests Command
+# Run main package tests (actual function tests) - these are in root directory
+go test -v .
 
 ## Integration Tests Command
+# Run integration tests
 go test -v ./test/integration/
+
+## Comprehensive Test Suite Command
+# Run all tests with coverage report
+go test -coverprofile=docs/coverage.out ./... -coverpkg=./... && go tool cover -func=docs/coverage.out
 
 ## Mocked Tests Command  
 go test -v ./test/mocked/
 
 ## Coverage Report Generation
 # Generate HTML coverage report
-go test -coverprofile=coverage.out ./... -coverpkg=./... && go tool cover -html=coverage.out -o coverage.html
+go test -coverprofile=docs/coverage.out ./... -coverpkg=./... && go tool cover -html=docs/coverage.out -o docs/coverage.html
+
+## Using Makefile Commands
+# Run tests: make test
+# Generate coverage: make coverage  
+# Clean up: make clean
 
 ## Key Functions Coverage Analysis (UPDATED - After Creating Tests):
 
@@ -45,12 +55,13 @@ go test -coverprofile=coverage.out ./... -coverpkg=./... && go tool cover -html=
 # 🔴 main (main.go)                         - 0.0% coverage (difficult to test - process entry point)
 
 ## New Test Files Created:
-# ✅ test_actual_handlers_test.go           - Tests for createCat, deleteCat functions
-# ✅ test_yml2json_actual_test.go           - Tests for yml2json function  
-# ✅ test_main_components_test.go           - Tests for main function components
-# ✅ test/unit/all_cats_handlers_test.go    - Mock tests for handler logic
-# ✅ test/unit/yml2json_test.go             - Comprehensive yml2json tests
-# ✅ test/unit/main_function_test.go        - Main function workflow tests
+# ✅ test_actual_handlers_test.go        - Tests for createCat, deleteCat functions (root)
+# ✅ test_yml2json_actual_test.go        - Tests for yml2json function (root)
+# ✅ test_main_components_test.go        - Tests for main function components (root)
+# ✅ test_main_functions_test.go         - Main package function tests (root)
+# ✅ test/unit/all_cats_handlers_test.go - Mock tests for handler logic
+# ✅ test/unit/yml2json_test.go          - Comprehensive yml2json tests
+# ✅ test/unit/main_function_test.go     - Main function workflow tests
 
 ## API Endpoints Tested Successfully:
 # ✅ GET /                     - Home page (200 OK)

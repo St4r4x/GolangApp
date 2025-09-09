@@ -1,22 +1,40 @@
-# Introduction
+# Go Cats API
 
-![Coverage](https://img.shields.io/badge/Coverage-54.6%25-yellow)
+![Coverage](https://img.shields.io/badge/Coverage-86.6%25-brightgreen)
 
-Cats demo REST API used to manage a local database of 🐈.
+A comprehensive REST API for managing cats 🐈 with full CRUD operations, built with Go.
 
-## Run locally
+## Quick Start
 
 ```bash
+# Clone and run
+git clone <repository-url>
+cd GolangApp
 go run .
 ```
 
-Then you can browse:
+Browse the application:
 
-- the home page: http://localhost:8080
-- the Swagger UI : http://localhost:8080/swagger/
-- the logs : http://localhost:8080/logs
+- **Home page:** http://localhost:8080
+- **Swagger UI:** http://localhost:8080/swagger/
+- **API endpoints:** http://localhost:8080/api/cats
 
-# Dev
+## Project Structure
+
+```text
+├── docs/              # Documentation and coverage reports
+├── test/              # All test files organized by type
+│   ├── unit/          # Unit tests with mocks
+│   ├── integration/   # Integration tests
+│   ├── apitests/      # API endpoint tests
+│   └── mocked/        # Mocked component tests
+├── logs/              # Application logs
+├── swagger-ui/        # Swagger UI assets
+├── *_test.go          # Main package tests (root level)
+└── *.go               # Go source files
+```
+
+## Development
 
 ## Compiling
 
@@ -54,39 +72,38 @@ Play also with:
 inspect ps stop rm rmi
 ```
 
-## Testing
+## Testing & Coverage
 
-The application includes comprehensive testing with **71 total tests** across multiple categories:
+The application features **86.6% test coverage** with comprehensive testing across multiple categories:
 
-- **Unit Tests** (20+ tests): `go test ./test/unit/... -v`
-- **API Tests** (8 tests): `go test ./test/apitests/... -v`
-- **Integration Tests** (3 tests): `go test ./test/integration/... -v`
-- **Mocked Tests** (2 tests): `go test ./test/mocked/... -v`
-- **Main Package Tests** (7 tests): `go test . -v`
-- **Plus additional sub-tests and variations**
+- **Unit Tests:** Component isolation with mocks
+- **Integration Tests:** Real function testing  
+- **API Tests:** End-to-end HTTP endpoint testing
+- **Mocked Tests:** Dependency injection testing
 
-### Running Tests
+### Quick Test Commands
 
-Run all tests: `go test ./test/... -v`
+```bash
+# Run all tests
+make test
 
-### Test Coverage
+# Generate coverage report  
+make coverage
 
-Generate coverage report: `go test -coverprofile=coverage.out ./... -coverpkg=./...`
-
-View coverage in browser: `go tool cover -html=coverage.out`
-
-Update coverage badge: `./update-coverage.sh`
-
-Test structure:
-
-```
-test/
-├── unit/       # Component isolation testing
-├── apitests/   # End-to-end HTTP testing
-└── mocked/     # Dependency injection with mocks
+# Run specific test types
+go test ./test/unit/ -v        # Unit tests
+go test . -v                   # Main package tests (root level)
+go test ./test/apitests/ -v    # API tests (requires server running)
+go test ./test/integration/ -v # Integration tests
 ```
 
-# Swagger UI setup (already done)
+### Coverage Reports
+
+- View detailed coverage: Open `docs/coverage.html`
+- Test documentation: See `docs/tp-tests.txt`
+- Testing guidelines: See `docs/TESTING.md`
+
+## Swagger UI Setup
 
 Done following [Swagger official doc](https://github.com/swagger-api/swagger-ui/blob/master/docs/usage/installation.md#plain-old-htmlcssjs-standalone).
 

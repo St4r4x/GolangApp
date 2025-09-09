@@ -6,18 +6,15 @@ test:
 
 # Run tests with coverage report
 coverage:
-	go test -coverprofile=coverage.out ./... -coverpkg=./...
-	go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
-	go tool cover -func=coverage.out | grep "total:"
-
-# Update coverage badge in README
-update-coverage:
-	./update-coverage.sh
+	go test -coverprofile=docs/coverage.out ./... -coverpkg=./...
+	go tool cover -html=docs/coverage.out -o docs/coverage.html
+	@echo "Coverage report generated: docs/coverage.html"
+	go tool cover -func=docs/coverage.out | grep "total:"
 
 # Clean up generated files
 clean:
-	rm -f coverage.out coverage.html
+	rm -f docs/coverage.out docs/coverage.html
+	rm -rf logs/*.log
 
 # Build the application
 build:
