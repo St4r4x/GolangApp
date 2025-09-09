@@ -36,7 +36,7 @@ repository name must be lowercase
 **Changes Made**:
 1. **Added build tags** to API test files:
    ```go
-   // +build integration
+   //go:build integration
    package apitests
    ```
 
