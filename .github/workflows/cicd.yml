@@ -379,10 +379,57 @@ jobs:
   deployment-ready:
     name: ✅ Deployment Ready
     runs-on: ubuntu-latest
-    needs: [api-tests, coverage-report, security-scan]
+    needs: [api-tests, coverage-report, security-scan, versioning]
     if: always() && (needs.api-tests.result == 'success' && needs.coverage-report.result == 'success')
+    permissions:
+      contents: write
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update version in deploy-dev branch
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+        run: |
+          echo "## 📝 Updating Version File" >> $GITHUB_STEP_SUMMARY
+          
+          # Configure Git
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Switch to deploy-dev branch
+          git fetch origin deploy-dev:deploy-dev || echo "Branch deploy-dev not found on remote"
+          git checkout deploy-dev
+          
+          # Get current version from deploy-dev branch
+          current_version=$(cat version.txt 2>/dev/null || echo "1.0.0")
+          echo "Current version: $current_version"
+          
+          # Generate new version using git commit info
+          git_version="${{ needs.versioning.outputs.version }}"
+          timestamp=$(date +"%Y%m%d-%H%M%S")
+          new_version="${current_version}-${git_version}-${timestamp}"
+          
+          # Update version.txt
+          echo "$new_version" > version.txt
+          
+          echo "- **Previous Version:** $current_version" >> $GITHUB_STEP_SUMMARY
+          echo "- **New Version:** $new_version" >> $GITHUB_STEP_SUMMARY
+          echo "- **Git Commit:** $git_version" >> $GITHUB_STEP_SUMMARY
+          
+          # Commit and push if there are changes
+          if git diff --quiet version.txt; then
+            echo "No version changes to commit"
+            echo "- **Status:** No changes needed" >> $GITHUB_STEP_SUMMARY
+          else
+            git add version.txt
+            git commit -m "🚀 Auto-update version to $(cat version.txt) from ${{ github.ref_name }} pipeline"
+            git push origin deploy-dev
+            echo "- **Status:** ✅ Version updated and pushed" >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Deployment summary
         run: |
           echo "## ✅ Deployment Ready" >> $GITHUB_STEP_SUMMARY
