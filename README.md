@@ -22,6 +22,7 @@ A production-ready REST API for managing cats 🐈 with full CRUD operations, en
 ## 🚀 Quick Start
 
 ### Single Instance
+
 ```bash
 git clone <repository-url>
 cd GolangApp
@@ -29,6 +30,7 @@ go run .
 ```
 
 ### Multi-Instance Load Balanced Setup
+
 ```bash
 # Start both instances (ports 8081, 8082)
 make docker-multi-up
@@ -78,6 +80,7 @@ make docker-multi-monitor
 ## 🔧 Development Commands
 
 ### Core Development
+
 ```bash
 make dev-setup          # Setup development environment
 make dev               # Start with hot reload (Air)
@@ -86,6 +89,7 @@ make build             # Build application
 ```
 
 ### Testing & Quality
+
 ```bash
 make test              # Run all tests
 make coverage          # Generate coverage report
@@ -95,6 +99,7 @@ make ci-local          # Full CI pipeline locally
 ```
 
 ### Docker Operations
+
 ```bash
 make docker-build      # Build production image
 make docker-run        # Run single container
@@ -102,6 +107,7 @@ make compose-up        # Development environment
 ```
 
 ### Multi-Instance Management
+
 ```bash
 make docker-multi-up           # Start instances (8081, 8082)
 make docker-multi-down         # Stop all instances
@@ -114,6 +120,7 @@ make docker-multi-logs         # View combined logs
 ## 🏗️ Architecture
 
 ### Load Balancing Setup
+
 ```
 Reverse Proxy (Port 4443) → Round Robin
     ├── Container 1 (Port 8081) → Internal 8080
@@ -121,12 +128,14 @@ Reverse Proxy (Port 4443) → Round Robin
 ```
 
 ### Enhanced Monitoring
+
 - **Server Identification:** Each request logged with container ID
 - **Response Headers:** `X-Server-Id`, `X-Container-Name`, `X-Server-Port`
 - **Load Distribution:** Visual confirmation of round-robin balancing
 - **Real-time Logs:** Live monitoring with server identification
 
 ### Example Log Output
+
 ```
 2025-09-11 13:00:52.728 dev I app.go:29 🌐 [Server: 066c8b84a819:8080] New request to: 'GET /' from 172.18.0.1:38036
 2025-09-11 13:00:53.245 dev I app.go:29 🌐 [Server: ee20f5b8b7e1:8080] New request to: 'GET /' from 172.18.0.1:56862
@@ -137,11 +146,12 @@ Reverse Proxy (Port 4443) → Round Robin
 **64.6% test coverage** across multiple testing strategies:
 
 - **Unit Tests:** Component isolation with mocks
-- **Integration Tests:** Real function testing  
+- **Integration Tests:** Real function testing
 - **API Tests:** End-to-end HTTP testing with build tags
 - **Mocked Tests:** Dependency injection testing
 
 ### Test Commands
+
 ```bash
 make test-unit         # Unit tests only
 make test-integration  # Integration tests only
@@ -151,6 +161,7 @@ make coverage          # Generate HTML coverage report
 ```
 
 ### Coverage Reports
+
 - **HTML Report:** `docs/coverage.html`
 - **Console Output:** Real-time coverage percentages
 - **CI Integration:** Automated coverage tracking
@@ -170,6 +181,7 @@ make coverage          # Generate HTML coverage report
 9. **Version Update** - Auto-update deploy-dev branch
 
 ### Pipeline Features
+
 - **Parallel Execution:** Optimized for speed
 - **Security Integration:** GHCR + Trivy scanning
 - **Auto-versioning:** Timestamp + commit hash
@@ -179,6 +191,7 @@ make coverage          # Generate HTML coverage report
 ## 🐳 Docker
 
 ### Multi-Stage Production Build
+
 ```dockerfile
 # Builder stage with Go 1.23
 FROM golang:1.23-alpine AS builder
@@ -188,6 +201,7 @@ FROM scratch AS runtime
 ```
 
 ### Container Features
+
 - **Optimized Size:** ~10MB final image
 - **Security:** Non-root user, minimal attack surface
 - **Health Checks:** Built-in endpoint monitoring
@@ -196,15 +210,17 @@ FROM scratch AS runtime
 ## 🔄 Load Balancing Integration
 
 ### Supported Reverse Proxies
+
 - **Nginx** - Configuration in `examples/nginx-reverse-proxy.conf`
 - **HAProxy** - Configuration in `examples/haproxy.cfg`
 - **Traefik** - Docker Compose in `examples/docker-compose.traefik.yml`
 - **Custom Go Proxy** - Round-robin implementation ready
 
 ### Monitoring Load Distribution
+
 ```bash
 # Test load balancing
-for i in {1..6}; do 
+for i in {1..6}; do
   port=$((8080 + (i % 2) + 1))
   echo "Request $i → Port $port"
   curl -s -I http://localhost:$port/ | grep "X-Server-Id"
@@ -223,13 +239,16 @@ Comprehensive documentation available:
 ## 🔧 Development Tools
 
 ### Hot Reload with Air
+
 ```bash
 make dev               # Start with hot reload
 # Configuration in .air.toml
 ```
 
 ### Comprehensive Makefile
+
 25+ commands for all development needs:
+
 ```bash
 make help              # Show all available commands
 make pre-commit        # Pre-commit validation
@@ -245,13 +264,14 @@ make version           # Show version info
 ✅ **Automated CI/CD**  
 ✅ **Comprehensive monitoring**  
 ✅ **Docker optimization**  
-✅ **Version management**  
+✅ **Version management**
 
 ## 📝 API Documentation
 
 Interactive Swagger UI available at `/swagger/` with complete API specification.
 
 ### Regenerate OpenAPI
+
 ```bash
 # Convert YAML to JSON for Swagger UI
 go run . -convert-openapi
