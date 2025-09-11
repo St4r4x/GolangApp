@@ -1,5 +1,4 @@
 # Docker Compose for Go Cats API Development & Testing
-version: "3.8"
 
 services:
   # =============================================================================

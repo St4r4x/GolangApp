@@ -239,3 +239,51 @@ version: ## Show version information
 	@echo "Version: $(VERSION)"
 	@echo "Build Time: $(BUILD_TIME)"
 	@echo "Go Version: $(GO_VERSION)"
+
+##@ Docker Multi-Instance
+docker-multi-up: ## Start multiple API instances (ports 8081, 8082)
+	@echo "$(BLUE)Starting multiple API instances...$(NC)"
+	docker compose -f docker-compose.multi.yml up --build -d
+	@echo "$(GREEN)APIs running on:$(NC)"
+	@echo "  - http://localhost:8081"
+	@echo "  - http://localhost:8082"
+
+docker-multi-down: ## Stop multiple API instances
+	@echo "$(BLUE)Stopping multiple API instances...$(NC)"
+	docker compose -f docker-compose.multi.yml down
+	@echo "$(GREEN)Multiple instances stopped!$(NC)"
+
+docker-multi-logs: ## Show logs from both instances
+	@echo "$(BLUE)Showing logs from both instances...$(NC)"
+	docker compose -f docker-compose.multi.yml logs -f
+
+docker-multi-ps: ## Show status of multiple instances
+	@echo "$(BLUE)Status of multiple instances:$(NC)"
+	docker compose -f docker-compose.multi.yml ps
+
+docker-multi-restart: ## Restart multiple instances
+	@echo "$(BLUE)Restarting multiple instances...$(NC)"
+	docker compose -f docker-compose.multi.yml restart
+	@echo "$(GREEN)Multiple instances restarted!$(NC)"
+
+docker-multi-test: ## Test both API instances
+	@echo "$(BLUE)Testing both API instances...$(NC)"
+	@echo "Testing port 8081:"
+	@curl -f http://localhost:8081/ && echo "$(GREEN)✓ Port 8081 OK$(NC)" || echo "$(RED)✗ Port 8081 FAILED$(NC)"
+	@echo "Testing port 8082:"
+	@curl -f http://localhost:8082/ && echo "$(GREEN)✓ Port 8082 OK$(NC)" || echo "$(RED)✗ Port 8082 FAILED$(NC)"
+
+docker-multi-load-test: ## Test load balancing (direct container access)
+	@echo "$(BLUE)Testing load balancing with 6 requests to containers...$(NC)"
+	@for i in 1 2 3 4 5 6; do \
+		port=$$((8080 + ($$i % 2) + 1)); \
+		echo "Request $$i: $$(date '+%H:%M:%S') → Port $$port"; \
+		curl -s -I http://localhost:$$port/ | grep "X-Server-Id" | sed 's/X-Server-Id: /  → Server: /'; \
+		sleep 0.5; \
+	done
+	@echo "$(GREEN)Load balancing test completed!$(NC)"
+
+docker-multi-monitor: ## Monitor requests in real-time (Ctrl+C to stop)
+	@echo "$(BLUE)Monitoring requests in real-time...$(NC)"
+	@echo "$(YELLOW)Make requests to test load balancing$(NC)"
+	@docker compose -f docker-compose.multi.yml logs -f --tail=0
