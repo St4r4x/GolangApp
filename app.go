@@ -20,13 +20,13 @@ func logReq(next http.Handler) http.Handler {
 		}
 		hostname, _ := os.Hostname()
 		serverID := hostname + ":" + port
-		
+
 		// Add server identification to response headers
 		w.Header().Set("X-Server-ID", serverID)
 		w.Header().Set("X-Container-Name", hostname)
 		w.Header().Set("X-Server-Port", port)
-		
-		Logger.Infof("🌐 [Server: %s] New request to: '%s %s' from %s", 
+
+		Logger.Infof("🌐 [Server: %s] New request to: '%s %s' from %s",
 			serverID, r.Method, r.RequestURI, r.RemoteAddr)
 		next.ServeHTTP(w, r)
 	})

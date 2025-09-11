@@ -9,21 +9,21 @@ import (
 var version string = "0.0.0-local"
 
 func main() {
-    Logger.Info("Starting the server")
+	Logger.Info("Starting the server")
 
-    app := newApp()
+	app := newApp()
 
-    // Get port from environment variable, default to 8080
-    port := os.Getenv("PORT")
-    if port == "" {
-        port = "8080"
-    }
+	// Get port from environment variable, default to 8080
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 
-    server := http.Server{
-        Addr:    ":" + port,
-        Handler: app,
-    }
+	server := http.Server{
+		Addr:    ":" + port,
+		Handler: app,
+	}
 
-    log.Printf("HTTP server listening on %v", server.Addr)
-    server.ListenAndServe()
+	log.Printf("HTTP server listening on %v", server.Addr)
+	server.ListenAndServe()
 }
