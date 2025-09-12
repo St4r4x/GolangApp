@@ -1,0 +1,9 @@
+services:
+  reverse-proxy:
+    build: .
+    ports:
+      - "4443:4443"
+    network_mode: host
+    volumes:
+      - ./certs:/root/certs:ro
+    restart: unless-stopped

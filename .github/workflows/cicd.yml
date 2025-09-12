@@ -1,5 +1,5 @@
 # DOC: https://docs.github.com/en/actions/publishing-packages/publishing-docker-images
-name: Go Cats API - CI/CD Pipeline
+name: Multi-Service Go Application - CI/CD Pipeline
 
 on:
   push:
@@ -16,12 +16,16 @@ permissions:
 env:
   GO_VERSION: "1.23"
   REGISTRY: ghcr.io
+  WORKING_DIR: ./projects/cats-api
 
 jobs:
   # Code Quality and Testing Jobs
   lint-and-format:
     name: 🔍 Code Linting & Formatting
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +60,9 @@ jobs:
   unit-tests:
     name: 🧪 Unit Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
     steps:
       - uses: actions/checkout@v4
 
@@ -252,7 +259,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./projects/cats-api
           push: true
           target: runtime
           tags: |
@@ -394,31 +401,31 @@ jobs:
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
         run: |
           echo "## 📝 Updating Version File" >> $GITHUB_STEP_SUMMARY
-          
+
           # Configure Git
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          
+
           # Switch to deploy-dev branch
           git fetch origin deploy-dev:deploy-dev || echo "Branch deploy-dev not found on remote"
           git checkout deploy-dev
-          
+
           # Get current version from deploy-dev branch
           current_version=$(cat version.txt 2>/dev/null || echo "1.0.0")
           echo "Current version: $current_version"
-          
+
           # Generate new version using git commit info
           git_version="${{ needs.versioning.outputs.version }}"
           timestamp=$(date +"%Y%m%d-%H%M%S")
           new_version="${current_version}-${git_version}-${timestamp}"
-          
+
           # Update version.txt
           echo "$new_version" > version.txt
-          
+
           echo "- **Previous Version:** $current_version" >> $GITHUB_STEP_SUMMARY
           echo "- **New Version:** $new_version" >> $GITHUB_STEP_SUMMARY
           echo "- **Git Commit:** $git_version" >> $GITHUB_STEP_SUMMARY
-          
+
           # Commit and push if there are changes
           if git diff --quiet version.txt; then
             echo "No version changes to commit"
