@@ -16,7 +16,7 @@ permissions:
 env:
   GO_VERSION: "1.23"
   REGISTRY: ghcr.io
-  WORKING_DIR: ./projects/cats-api
+  WORKING_DIR: projects/cats-api
 
 jobs:
   # Code Quality and Testing Jobs
@@ -111,6 +111,9 @@ jobs:
   integration-tests:
     name: 🔗 Integration Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
     steps:
       - uses: actions/checkout@v4
 
@@ -142,6 +145,9 @@ jobs:
     name: 📊 Coverage Analysis
     runs-on: ubuntu-latest
     needs: [unit-tests, integration-tests]
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
     steps:
       - uses: actions/checkout@v4
 
@@ -259,7 +265,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./projects/cats-api
+          context: projects/cats-api
           push: true
           target: runtime
           tags: |
@@ -283,6 +289,9 @@ jobs:
     name: 🌐 API Tests
     runs-on: ubuntu-latest
     needs: [build-and-push, versioning]
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
 
     services:
       backend:
