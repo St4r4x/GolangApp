@@ -1,0 +1,114 @@
+# =============================================================================
+# Registry-Based Docker Compose - Production Deployment from Registry
+# =============================================================================
+# This configuration deploys from pre-built images in the registry:
+# - Cats API from ghcr.io/st4r4x/golangapp/cats-api:latest
+# - Custom Go Reverse Proxy from ghcr.io/st4r4x/golangapp/reverse-proxy:latest
+# - Production-ready settings with health checks and resource limits
+# =============================================================================
+
+services:
+  # =============================================================================
+  # Cats API Service - Main Application Backend
+  # =============================================================================
+  cats-api:
+    image: ghcr.io/st4r4x/golangapp/cats-api:latest
+    expose:
+      - "8080"
+    environment:
+      - PORT=8080
+      - ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      mode: replicated
+      replicas: 5 # High availability with 5 replicas
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    labels:
+      - "service=cats-api"
+      - "environment=production"
+      - "version=latest"
+
+  # =============================================================================
+  # Reverse Proxy Service - Load Balancer & Entry Point
+  # =============================================================================
+  reverse-proxy:
+    image: ghcr.io/st4r4x/golangapp/reverse-proxy:latest
+    ports:
+      - "4443:8080" # External port 4443 maps to internal 8080
+    depends_on:
+      - cats-api
+    restart: unless-stopped
+    environment:
+      - BACKEND_SERVICE=cats-api
+      - BACKEND_PORT=8080
+      - PROXY_PORT=8080
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+    labels:
+      - "service=reverse-proxy"
+      - "environment=production"
+      - "version=latest"
+      - "external-port=4443"
+
+# =============================================================================
+# Network Configuration
+# =============================================================================
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: cats-api-bridge
+
+# =============================================================================
+# Volume Configuration (if needed for logs/data persistence)
+# =============================================================================
+volumes:
+  api-logs:
+    driver: local
+  proxy-logs:
+    driver: local

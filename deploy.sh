@@ -12,10 +12,12 @@ set -e
 
 # Configuration
 COMPOSE_FILE="docker-compose.prod.yml"
+REGISTRY_COMPOSE_FILE="docker-compose.registry.yml"
 SERVICE_NAME="cats-api-stack"
 DEFAULT_REPLICAS=5
 DEFAULT_PORT=4443
 DOCKER_COMPOSE_CMD=""
+USE_REGISTRY=false
 
 # Colors for output
 RED='\033[0;31m'
@@ -81,13 +83,35 @@ deploy_stack() {
     
     log_info "Deploying integrated Cats API + Reverse Proxy stack..."
     log_info "Configuration:"
+    echo "  - Deployment Mode: $(if [ "$USE_REGISTRY" = true ]; then echo "Registry (ghcr.io)"; else echo "Local Build"; fi)"
+    echo "  - Compose File: $COMPOSE_FILE"
     echo "  - API Replicas: $replicas"
     echo "  - External Port: $DEFAULT_PORT"
     echo "  - Load Balancer: Custom Go Reverse Proxy"
     
-    # Pull latest images
-    log_info "Pulling latest Docker images..."
-    $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" pull
+    # Registry-specific preparations
+    if [ "$USE_REGISTRY" = true ]; then
+        log_info "Registry mode: Checking for required images..."
+        
+        # Check if registry images exist locally
+        local cats_api_exists=$(docker images -q ghcr.io/st4r4x/golangapp:latest 2>/dev/null)
+        local reverse_proxy_exists=$(docker images -q ghcr.io/st4r4x/golangapp/reverse-proxy:latest 2>/dev/null)
+        
+        if [ -n "$cats_api_exists" ] && [ -n "$reverse_proxy_exists" ]; then
+            log_success "✅ Registry images found locally, skipping pull"
+        else
+            log_info "Pulling latest images from ghcr.io..."
+            log_warning "Make sure you're authenticated with GitHub Container Registry"
+            log_info "If not authenticated, run: echo \$GITHUB_TOKEN | docker login ghcr.io -u \$GITHUB_USERNAME --password-stdin"
+            
+            # Pull latest images
+            $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" pull
+        fi
+    else
+        log_info "Local build mode: Pulling/building latest Docker images..."
+        # Pull latest images
+        $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" pull
+    fi
     
     # Deploy with specified replicas
     log_info "Starting services with $replicas API replicas..."
@@ -288,7 +312,11 @@ stop_stack() {
 show_usage() {
     echo "Integrated Cats API + Reverse Proxy Deployment Script"
     echo ""
-    echo "Usage: $0 [COMMAND] [OPTIONS]"
+    echo "Usage: $0 [OPTIONS] [COMMAND] [ARGUMENTS]"
+    echo ""
+    echo "Options:"
+    echo "  --registry         Use registry-based deployment (pull from ghcr.io)"
+    echo "  --local           Use local build deployment (default)"
     echo ""
     echo "Commands:"
     echo "  deploy [replicas]  Deploy the integrated stack (default: $DEFAULT_REPLICAS replicas)"
@@ -300,14 +328,54 @@ show_usage() {
     echo "  help              Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0 deploy 3       Deploy with 3 API replicas"
+    echo "  $0 deploy 3       Deploy with 3 API replicas using local builds"
+    echo "  $0 --registry deploy 5   Deploy with 5 replicas using registry images"
     echo "  $0 scale 10       Scale to 10 API replicas"
     echo "  $0 test           Test load balancing"
     echo "  $0 status         Show current status"
 }
 
+# Parse command line arguments
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --registry)
+                USE_REGISTRY=true
+                COMPOSE_FILE="$REGISTRY_COMPOSE_FILE"
+                log_info "Using registry-based deployment"
+                shift
+                ;;
+            --local)
+                USE_REGISTRY=false
+                COMPOSE_FILE="docker-compose.prod.yml"
+                log_info "Using local build deployment"
+                shift
+                ;;
+            *)
+                # Pass remaining arguments to main function
+                break
+                ;;
+        esac
+    done
+}
+
 # Main script logic
 main() {
+    # Parse arguments first
+    parse_arguments "$@"
+    
+    # Shift past parsed options to get the command
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --registry|--local)
+                shift
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+    
     case "${1:-deploy}" in
         "deploy")
             check_prerequisites
