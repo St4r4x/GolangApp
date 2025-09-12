@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"hash/fnv"
 	"html/template"
@@ -11,6 +12,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -311,13 +314,50 @@ func discoverBackends() []string {
 	return discoveredBackends
 }
 
+// parseStrategy converts string to LoadBalancingStrategy
+func parseStrategy(strategyStr string) LoadBalancingStrategy {
+	switch strings.ToLower(strings.TrimSpace(strategyStr)) {
+	case "roundrobin", "round-robin", "rr":
+		return RoundRobin
+	case "random", "rand":
+		return Random
+	case "weighted", "weightedroundrobin", "weighted-round-robin", "wrr":
+		return WeightedRoundRobin
+	case "leastconnections", "least-connections", "lc":
+		return LeastConnections
+	case "iphash", "ip-hash", "hash":
+		return IPHash
+	default:
+		log.Printf("Unknown strategy '%s', defaulting to Round Robin", strategyStr)
+		return RoundRobin
+	}
+}
+
+// getConfiguredStrategy returns the strategy from command line or environment variable
+func getConfiguredStrategy() LoadBalancingStrategy {
+	// Check command line flag first
+	var strategyFlag = flag.String("strategy", "", "Load balancing strategy (roundrobin, random, weighted, leastconnections, iphash)")
+	flag.Parse()
+	
+	if *strategyFlag != "" {
+		return parseStrategy(*strategyFlag)
+	}
+	
+	// Check environment variable
+	if envStrategy := os.Getenv("LB_STRATEGY"); envStrategy != "" {
+		return parseStrategy(envStrategy)
+	}
+	
+	// Default to Round Robin
+	return RoundRobin
+}
+
 func main() {
 	// Initialize random seed
 	rand.Seed(time.Now().UnixNano())
 	
-	// Create load balancer with configurable strategy
-	// Default to Round Robin, but can be configured via environment variable
-	strategy := RoundRobin // Can be made configurable
+	// Get configured load balancing strategy
+	strategy := getConfiguredStrategy()
 	loadBalancer = NewLoadBalancer(strategy)
 	
 	// Discover backends and add them to load balancer

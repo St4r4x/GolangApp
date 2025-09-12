@@ -76,6 +76,7 @@ services:
       - BACKEND_SERVICE=cats-api
       - BACKEND_PORT=8080
       - PROXY_PORT=8080
+      - LB_STRATEGY=${LB_STRATEGY:-roundrobin} # Load balancing strategy
     healthcheck:
       test:
         [

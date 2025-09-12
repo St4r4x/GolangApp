@@ -23,9 +23,14 @@ jobs:
   lint-and-format:
     name: 🔍 Code Linting & Formatting
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project:
+          - { name: "cats-api", path: "projects/cats-api" }
+          - { name: "reverse-proxy", path: "projects/reverse-proxy" }
     defaults:
       run:
-        working-directory: ${{ env.WORKING_DIR }}
+        working-directory: ${{ matrix.project.path }}
     steps:
       - uses: actions/checkout@v4
 
@@ -57,8 +62,15 @@ jobs:
             exit 1
           fi
 
-  unit-tests:
-    name: 🧪 Unit & Integration Tests
+      - name: Update step summary
+        run: |
+          echo "## 🔍 ${{ matrix.project.name }} Linting Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **go vet:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- **staticcheck:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- **go fmt:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
+
+  cats-api-tests:
+    name: 🧪 Cats API - Unit & Integration Tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -76,7 +88,7 @@ jobs:
 
       - name: Run all tests with coverage
         run: |
-          echo "## 🧪 Running All Tests with Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "## 🧪 Running Cats API Tests with Coverage" >> $GITHUB_STEP_SUMMARY
 
           # Run comprehensive test suite with coverage
           go test -coverprofile=coverage.out -v \
@@ -86,7 +98,7 @@ jobs:
           # Generate coverage report
           go tool cover -html=coverage.out -o coverage.html
           COVERAGE=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}')
-          echo "**Total Coverage:** $COVERAGE" >> $GITHUB_STEP_SUMMARY
+          echo "**Cats API Coverage:** $COVERAGE" >> $GITHUB_STEP_SUMMARY
 
           # Generate individual coverage files for artifact compatibility
           go test -coverprofile=unit-coverage.out ./test/unit/... || touch unit-coverage.out
@@ -97,14 +109,59 @@ jobs:
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: test-coverage
+          name: cats-api-test-coverage
           path: |
-            coverage.out
-            coverage.html
-            unit-coverage.out
-            integration-coverage.out
-            mocked-coverage.out
-            main-coverage.out
+            projects/cats-api/coverage.out
+            projects/cats-api/coverage.html
+            projects/cats-api/unit-coverage.out
+            projects/cats-api/integration-coverage.out
+            projects/cats-api/mocked-coverage.out
+            projects/cats-api/main-coverage.out
+
+  reverse-proxy-tests:
+    name: 🔄 Reverse Proxy - Load Balancing Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/reverse-proxy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run reverse proxy tests with coverage
+        run: |
+          echo "## 🔄 Running Reverse Proxy Load Balancing Tests" >> $GITHUB_STEP_SUMMARY
+
+          # Run tests with coverage
+          go test -coverprofile=proxy-coverage.out -v . -bench=. -benchmem
+
+          # Generate coverage report
+          go tool cover -html=proxy-coverage.out -o proxy-coverage.html
+          COVERAGE=$(go tool cover -func=proxy-coverage.out | tail -1 | awk '{print $3}')
+          echo "**Reverse Proxy Coverage:** $COVERAGE" >> $GITHUB_STEP_SUMMARY
+
+          # Display load balancing strategy tests results
+          echo "### 🎯 Load Balancing Strategies Tested:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Round Robin" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Random" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Weighted Round Robin" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Least Connections" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ IP Hash" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload reverse proxy coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: reverse-proxy-test-coverage
+          path: |
+            projects/reverse-proxy/proxy-coverage.out
+            projects/reverse-proxy/proxy-coverage.html
 
   versioning:
     name: 📋 Version Management
@@ -153,7 +210,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: [lint-and-format, unit-tests, versioning]
+    needs: [lint-and-format, cats-api-tests, reverse-proxy-tests, versioning]
 
     steps:
       - uses: actions/checkout@v4
@@ -347,8 +404,15 @@ jobs:
   deployment-ready:
     name: ✅ Deployment Ready
     runs-on: ubuntu-latest
-    needs: [api-tests, unit-tests, security-scan, versioning]
-    if: always() && (needs.api-tests.result == 'success' && needs.unit-tests.result == 'success')
+    needs:
+      [
+        api-tests,
+        cats-api-tests,
+        reverse-proxy-tests,
+        security-scan,
+        versioning,
+      ]
+    if: always() && (needs.api-tests.result == 'success' && needs.cats-api-tests.result == 'success' && needs.reverse-proxy-tests.result == 'success')
     permissions:
       contents: write
 
@@ -401,8 +465,9 @@ jobs:
       - name: Deployment summary
         run: |
           echo "## ✅ Deployment Ready" >> $GITHUB_STEP_SUMMARY
-          echo "All tests passed and image is ready for deployment!" >> $GITHUB_STEP_SUMMARY
-          echo "- **Unit Tests:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
-          echo "- **Integration Tests:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
-          echo "- **API Tests:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "All tests passed and images are ready for deployment!" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cats API Tests:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reverse Proxy Tests:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Integration Tests:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
           echo "- **Security Scan:** ✅ Completed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Load Balancing Strategies:** 5 strategies tested" >> $GITHUB_STEP_SUMMARY

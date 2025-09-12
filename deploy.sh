@@ -1,11 +1,12 @@
 #!/bin/bash
 # =============================================================================
-# Integrated Cats API + Reverse Proxy Deployment Script
+# Integrated Cats API + Reverse Proxy Deployment Script with Strategy Demo
 # =============================================================================
 # This script deploys the complete microservices package with:
 # - Cats API backend (scalable replicas)
-# - Custom Go reverse proxy load balancer
+# - Custom Go reverse proxy load balancer (5 strategies)
 # - Production-ready configuration
+# - Interactive strategy demonstration
 # =============================================================================
 
 set -e
@@ -19,11 +20,22 @@ DEFAULT_PORT=4443
 DOCKER_COMPOSE_CMD=""
 USE_REGISTRY=false
 
+# Load Balancing Strategies
+declare -A STRATEGIES=(
+    ["roundrobin"]="Round Robin - Equal distribution"
+    ["random"]="Random - Prevents cache hotspots"
+    ["weighted"]="Weighted Round Robin - Different capacities"
+    ["leastconnections"]="Least Connections - Varying request times"
+    ["iphash"]="IP Hash - Session affinity"
+)
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Helper functions
@@ -41,6 +53,97 @@ log_warning() {
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+log_strategy() {
+    echo -e "${PURPLE}[STRATEGY]${NC} $1"
+}
+
+log_demo() {
+    echo -e "${CYAN}[DEMO]${NC} $1"
+}
+
+# Strategy demonstration functions
+show_strategies() {
+    echo ""
+    log_strategy "Available Load Balancing Strategies:"
+    echo "======================================"
+    local i=1
+    for strategy in "${!STRATEGIES[@]}"; do
+        echo -e "${CYAN}$i.${NC} ${YELLOW}$strategy${NC} - ${STRATEGIES[$strategy]}"
+        ((i++))
+    done
+    echo ""
+}
+
+demo_strategy() {
+    local strategy=${1:-"roundrobin"}
+    local replicas=${2:-5}
+    
+    if [[ ! "${!STRATEGIES[@]}" =~ "${strategy}" ]]; then
+        log_error "Invalid strategy: $strategy"
+        show_strategies
+        return 1
+    fi
+    
+    log_demo "Demonstrating $strategy strategy with $replicas replicas..."
+    echo ""
+    log_info "Strategy: ${YELLOW}$strategy${NC} - ${STRATEGIES[$strategy]}"
+    
+    # Set environment variable for load balancing strategy
+    export LB_STRATEGY=$strategy
+    
+    # Deploy with the specified strategy
+    deploy_stack $replicas
+    
+    if [ $? -eq 0 ]; then
+        echo ""
+        log_success "Load balancer deployed with $strategy strategy!"
+        log_info "Testing load balancing..."
+        test_load_balancing
+        
+        echo ""
+        log_demo "Strategy demonstration complete!"
+        echo -e "${CYAN}Access your application at: ${YELLOW}http://localhost:$DEFAULT_PORT${NC}"
+        echo -e "${CYAN}View logs with: ${YELLOW}docker logs -f golangapp-reverse-proxy-1${NC}"
+    fi
+}
+
+interactive_strategy_demo() {
+    show_strategies
+    echo -e "${CYAN}Choose a strategy to demonstrate (1-5) or 'q' to quit:${NC}"
+    read -r choice
+    
+    case $choice in
+        1) demo_strategy "roundrobin" ;;
+        2) demo_strategy "random" ;;
+        3) demo_strategy "weighted" ;;
+        4) demo_strategy "leastconnections" ;;
+        5) demo_strategy "iphash" ;;
+        q|Q) log_info "Exiting strategy demo."; exit 0 ;;
+        *) log_error "Invalid choice. Please run demo again."; exit 1 ;;
+    esac
+}
+
+test_load_balancing() {
+    log_info "Testing load balancing distribution..."
+    
+    # Wait for services to be ready
+    sleep 5
+    
+    # Test 10 requests to see distribution
+    for i in {1..10}; do
+        response=$(curl -s http://localhost:$DEFAULT_PORT/ 2>/dev/null)
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓${NC} Request $i successful"
+        else
+            echo -e "${RED}✗${NC} Request $i failed"
+        fi
+    done
+    
+    echo ""
+    log_info "Check load balancer logs for distribution details:"
+    echo -e "${YELLOW}docker logs golangapp-reverse-proxy-1 | grep strategy${NC}"
 }
 
 # Get the correct docker compose command
@@ -310,7 +413,7 @@ stop_stack() {
 
 # Show usage information
 show_usage() {
-    echo "Integrated Cats API + Reverse Proxy Deployment Script"
+    echo "Integrated Cats API + Reverse Proxy Deployment Script with Strategy Demo"
     echo ""
     echo "Usage: $0 [OPTIONS] [COMMAND] [ARGUMENTS]"
     echo ""
@@ -320,6 +423,8 @@ show_usage() {
     echo ""
     echo "Commands:"
     echo "  deploy [replicas]  Deploy the integrated stack (default: $DEFAULT_REPLICAS replicas)"
+    echo "  demo              Interactive load balancing strategy demonstration"
+    echo "  demo <strategy>   Demo specific strategy (roundrobin, random, weighted, leastconnections, iphash)"
     echo "  status            Show deployment status and health"
     echo "  scale <replicas>  Scale the API service to specified replicas"
     echo "  test              Test load balancing functionality"
@@ -327,12 +432,22 @@ show_usage() {
     echo "  stop              Stop all services"
     echo "  help              Show this help message"
     echo ""
+    echo "Load Balancing Strategies:"
+    echo "  roundrobin        Equal distribution (default)"
+    echo "  random           Prevents cache hotspots"
+    echo "  weighted         Different backend capacities"
+    echo "  leastconnections Varying request times"
+    echo "  iphash           Session affinity"
+    echo ""
     echo "Examples:"
-    echo "  $0 deploy 3       Deploy with 3 API replicas using local builds"
-    echo "  $0 --registry deploy 5   Deploy with 5 replicas using registry images"
-    echo "  $0 scale 10       Scale to 10 API replicas"
-    echo "  $0 test           Test load balancing"
-    echo "  $0 status         Show current status"
+    echo "  $0 deploy 3                    Deploy with 3 API replicas using local builds"
+    echo "  $0 --registry deploy 5         Deploy with 5 replicas using registry images"
+    echo "  $0 demo                        Interactive strategy demonstration"
+    echo "  $0 demo leastconnections       Demo least connections strategy"
+    echo "  LB_STRATEGY=iphash $0 deploy 5 Deploy with IP hash strategy"
+    echo "  $0 scale 10                    Scale to 10 API replicas"
+    echo "  $0 test                        Test load balancing"
+    echo "  $0 status                      Show current status"
 }
 
 # Parse command line arguments
@@ -381,6 +496,14 @@ main() {
             check_prerequisites
             deploy_stack "$2"
             show_status
+            ;;
+        "demo")
+            check_prerequisites
+            if [ -n "$2" ]; then
+                demo_strategy "$2"
+            else
+                interactive_strategy_demo
+            fi
             ;;
         "status")
             check_prerequisites

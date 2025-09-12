@@ -46,6 +46,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "4443:8080"
+    environment:
+      - LB_STRATEGY=${LB_STRATEGY:-roundrobin} # Default to round robin, can be overridden
     depends_on:
       - cats-api
     restart: unless-stopped

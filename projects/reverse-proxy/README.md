@@ -1,34 +1,31 @@
-# Advanced Load Balancer - Reverse Proxy
+# 🔄 Advanced Load Balancer - Reverse Proxy
 
-## 🔄 Overview
+## Overview
 
-This enhanced reverse proxy provides advanced load balancing capabilities with multiple strategies, comprehensive health monitoring, and detailed statistics tracking. It's designed for high-availability environments with intelligent backend selection and automatic failure detection.
+This is the advanced reverse proxy component of the Go Cats API project. It provides intelligent load balancing with 5 different strategies, health monitoring, and automatic backend discovery.
 
-## 🎯 Load Balancing Strategies
+## 📚 Documentation
 
-### 1. Round Robin (Default)
+For comprehensive documentation about this load balancer, please see:
 
-**Best for:** Equal distribution across backends with uniform capacity
+**[📖 Complete Load Balancer Documentation](../../docs/LOAD_BALANCER.md)**
 
-```go
-// Simple round-robin rotation through healthy backends
-backend1 → backend2 → backend3 → backend1 → ...
-```
+This includes:
 
-**Characteristics:**
+- All 5 load balancing strategies with performance benchmarks
+- Configuration options and Docker integration
+- Real-time monitoring and health checks
+- Advanced features and troubleshooting guides
 
-- Equal distribution of requests
-- Low overhead and high performance
-- Perfect for homogeneous backend servers
+## Quick Start
 
-### 2. Random
+````bash
+# Start with specific strategy
+LB_STRATEGY=leastconnections go run .
 
-**Best for:** Preventing thundering herd effects and cache hotspots
-
-```go
-// Random selection from healthy backends
-backend2 → backend1 → backend3 → backend2 → backend1 → ...
-```
+# Or use environment variable
+export LB_STRATEGY=iphash
+go run .
 
 **Characteristics:**
 
@@ -44,7 +41,7 @@ backend2 → backend1 → backend3 → backend2 → backend1 → ...
 // Distribution based on backend weights
 // backend1:weight=1, backend2:weight=3, backend3:weight=2
 backend2 → backend2 → backend3 → backend1 → backend2 → backend3 → ...
-```
+````
 
 **Characteristics:**
 
