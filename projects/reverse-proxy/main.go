@@ -353,8 +353,8 @@ func getConfiguredStrategy() LoadBalancingStrategy {
 }
 
 func main() {
-	// Initialize random seed
-	rand.Seed(time.Now().UnixNano())
+	// Note: As of Go 1.20, rand.Seed is deprecated and no longer needed.
+	// The global random generator is automatically seeded.
 	
 	// Get configured load balancing strategy
 	strategy := getConfiguredStrategy()
