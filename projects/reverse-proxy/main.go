@@ -44,11 +44,11 @@ type Backend struct {
 
 // LoadBalancer manages backends and load balancing strategies
 type LoadBalancer struct {
-	backends         []*Backend
-	strategy         LoadBalancingStrategy
-	roundRobinIndex  int
-	weightedIndex    int
-	mutex            sync.RWMutex
+	backends        []*Backend
+	strategy        LoadBalancingStrategy
+	roundRobinIndex int
+	weightedIndex   int
+	mutex           sync.RWMutex
 }
 
 // NewLoadBalancer creates a new load balancer with specified strategy
@@ -63,7 +63,7 @@ func NewLoadBalancer(strategy LoadBalancingStrategy) *LoadBalancer {
 func (lb *LoadBalancer) AddBackend(url string, weight int) {
 	lb.mutex.Lock()
 	defer lb.mutex.Unlock()
-	
+
 	backend := &Backend{
 		URL:     url,
 		Weight:  weight,
@@ -77,12 +77,12 @@ func (lb *LoadBalancer) AddBackend(url string, weight int) {
 func (lb *LoadBalancer) GetBackend(clientIP string) *Backend {
 	lb.mutex.Lock()
 	defer lb.mutex.Unlock()
-	
+
 	healthyBackends := lb.getHealthyBackends()
 	if len(healthyBackends) == 0 {
 		return nil
 	}
-	
+
 	switch lb.strategy {
 	case RoundRobin:
 		return lb.roundRobinSelect(healthyBackends)
@@ -135,7 +135,7 @@ func (lb *LoadBalancer) weightedRoundRobinSelect(backends []*Backend) *Backend {
 	if len(backends) == 0 {
 		return nil
 	}
-	
+
 	// Calculate total weight
 	totalWeight := 0
 	for _, backend := range backends {
@@ -143,15 +143,15 @@ func (lb *LoadBalancer) weightedRoundRobinSelect(backends []*Backend) *Backend {
 		totalWeight += backend.Weight
 		backend.mutex.RUnlock()
 	}
-	
+
 	if totalWeight == 0 {
 		return lb.roundRobinSelect(backends)
 	}
-	
+
 	// Find backend based on weighted distribution
 	lb.weightedIndex = (lb.weightedIndex + 1) % totalWeight
 	currentWeight := 0
-	
+
 	for _, backend := range backends {
 		backend.mutex.RLock()
 		currentWeight += backend.Weight
@@ -161,7 +161,7 @@ func (lb *LoadBalancer) weightedRoundRobinSelect(backends []*Backend) *Backend {
 		}
 		backend.mutex.RUnlock()
 	}
-	
+
 	return backends[0] // Fallback
 }
 
@@ -170,10 +170,10 @@ func (lb *LoadBalancer) leastConnectionsSelect(backends []*Backend) *Backend {
 	if len(backends) == 0 {
 		return nil
 	}
-	
+
 	var selected *Backend
 	minConnections := int(^uint(0) >> 1) // Max int value
-	
+
 	for _, backend := range backends {
 		backend.mutex.RLock()
 		if backend.ActiveRequests < minConnections {
@@ -182,7 +182,7 @@ func (lb *LoadBalancer) leastConnectionsSelect(backends []*Backend) *Backend {
 		}
 		backend.mutex.RUnlock()
 	}
-	
+
 	return selected
 }
 
@@ -191,11 +191,11 @@ func (lb *LoadBalancer) ipHashSelect(backends []*Backend, clientIP string) *Back
 	if len(backends) == 0 {
 		return nil
 	}
-	
+
 	hasher := fnv.New32a()
 	hasher.Write([]byte(clientIP))
 	hash := hasher.Sum32()
-	
+
 	return backends[int(hash)%len(backends)]
 }
 
@@ -287,11 +287,11 @@ func GetStrategyName(strategy LoadBalancingStrategy) string {
 // Discover all cats-api instances
 func discoverBackends() []string {
 	var discoveredBackends []string
-	
+
 	// Try to resolve cats-api service to get all IPs
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	resolver := &net.Resolver{}
 	ips, err := resolver.LookupIPAddr(ctx, "cats-api")
 	if err != nil {
@@ -299,18 +299,18 @@ func discoverBackends() []string {
 		// Fallback to single service name
 		return []string{"http://cats-api:8080"}
 	}
-	
+
 	for _, ip := range ips {
 		backend := fmt.Sprintf("http://%s:8080", ip.IP.String())
 		discoveredBackends = append(discoveredBackends, backend)
 		log.Printf("Discovered backend: %s", backend)
 	}
-	
+
 	if len(discoveredBackends) == 0 {
 		// Fallback
 		discoveredBackends = []string{"http://cats-api:8080"}
 	}
-	
+
 	return discoveredBackends
 }
 
@@ -338,16 +338,16 @@ func getConfiguredStrategy() LoadBalancingStrategy {
 	// Check command line flag first
 	var strategyFlag = flag.String("strategy", "", "Load balancing strategy (roundrobin, random, weighted, leastconnections, iphash)")
 	flag.Parse()
-	
+
 	if *strategyFlag != "" {
 		return parseStrategy(*strategyFlag)
 	}
-	
+
 	// Check environment variable
 	if envStrategy := os.Getenv("LB_STRATEGY"); envStrategy != "" {
 		return parseStrategy(envStrategy)
 	}
-	
+
 	// Default to Round Robin
 	return RoundRobin
 }
@@ -355,19 +355,19 @@ func getConfiguredStrategy() LoadBalancingStrategy {
 func main() {
 	// Note: As of Go 1.20, rand.Seed is deprecated and no longer needed.
 	// The global random generator is automatically seeded.
-	
+
 	// Get configured load balancing strategy
 	strategy := getConfiguredStrategy()
 	loadBalancer = NewLoadBalancer(strategy)
-	
+
 	// Discover backends and add them to load balancer
 	discoveredBackends := discoverBackends()
 	for _, backend := range discoveredBackends {
 		// Default weight of 1, can be made configurable
 		loadBalancer.AddBackend(backend, 1)
 	}
-	
-	log.Printf("Load balancer starting with %d backends using %s strategy", 
+
+	log.Printf("Load balancer starting with %d backends using %s strategy",
 		len(discoveredBackends), GetStrategyName(strategy))
 
 	server := &http.Server{
@@ -405,24 +405,24 @@ func proxyHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		clientIP := getClientIP(r)
 		backend := loadBalancer.GetBackend(clientIP)
-		
+
 		if backend == nil {
 			http.Error(w, "No healthy backends available", http.StatusServiceUnavailable)
 			return
 		}
-		
+
 		// Track active connections
 		backend.IncrementConnections()
 		defer backend.DecrementConnections()
-		
+
 		target, err := url.Parse(backend.URL)
 		if err != nil {
 			http.Error(w, "Invalid backend URL", http.StatusInternalServerError)
 			return
 		}
-		
+
 		proxy := httputil.NewSingleHostReverseProxy(target)
-		
+
 		// Add error handling
 		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 			log.Printf("Proxy error for backend %s: %v", backend.URL, err)
@@ -431,7 +431,7 @@ func proxyHandler() http.HandlerFunc {
 			backend.mutex.Unlock()
 			http.Error(w, "Backend temporarily unavailable", http.StatusBadGateway)
 		}
-		
+
 		proxy.ServeHTTP(w, r)
 	}
 }
@@ -445,7 +445,7 @@ func mainHandler() http.Handler {
 			_, total, _ := backend.GetStats()
 			totalRequests += total
 		}
-		
+
 		data := TemplateData{
 			Version:       version,
 			Strategy:      GetStrategyName(loadBalancer.strategy),
@@ -453,7 +453,7 @@ func mainHandler() http.Handler {
 			TotalRequests: totalRequests,
 		}
 		loadBalancer.mutex.RUnlock()
-		
+
 		pingTemplate.ExecuteTemplate(res, "", data)
 	})
 
