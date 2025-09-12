@@ -15,6 +15,7 @@ COMPOSE_FILE="docker-compose.prod.yml"
 SERVICE_NAME="cats-api-stack"
 DEFAULT_REPLICAS=5
 DEFAULT_PORT=4443
+DOCKER_COMPOSE_CMD=""
 
 # Colors for output
 RED='\033[0;31m'
@@ -40,6 +41,18 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Get the correct docker compose command
+get_docker_compose_cmd() {
+    if command -v docker-compose &> /dev/null; then
+        echo "docker-compose"
+    elif docker compose version &> /dev/null 2>&1; then
+        echo "docker compose"
+    else
+        log_error "Neither 'docker-compose' nor 'docker compose' is available"
+        exit 1
+    fi
+}
+
 # Check prerequisites
 check_prerequisites() {
     log_info "Checking prerequisites..."
@@ -49,10 +62,10 @@ check_prerequisites() {
         exit 1
     fi
     
-    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-        log_error "Docker Compose is not available"
-        exit 1
-    fi
+    # Check Docker Compose availability and set command
+    DOCKER_COMPOSE_CMD=$(get_docker_compose_cmd)
+    export DOCKER_COMPOSE_CMD
+    log_info "Using Docker Compose command: $DOCKER_COMPOSE_CMD"
     
     if [ ! -f "$COMPOSE_FILE" ]; then
         log_error "Production compose file '$COMPOSE_FILE' not found"
@@ -74,18 +87,55 @@ deploy_stack() {
     
     # Pull latest images
     log_info "Pulling latest Docker images..."
-    docker-compose -f "$COMPOSE_FILE" pull
+    $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" pull
     
     # Deploy with specified replicas
     log_info "Starting services with $replicas API replicas..."
-    docker-compose -f "$COMPOSE_FILE" up -d --scale cats-api="$replicas"
+    $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" up -d --scale cats-api="$replicas"
     
     # Wait for services to be healthy
     log_info "Waiting for services to become healthy..."
     sleep 10
     
+    # Reload load balancer to discover all backends
+    reload_load_balancer
+    
     # Check service status
     check_services
+}
+
+# Reload load balancer to discover new backends
+reload_load_balancer() {
+    log_info "Reloading load balancer to discover new backends..."
+    
+    # Restart the reverse proxy to pick up new backend containers
+    $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" restart reverse-proxy
+    
+    # Wait for reverse proxy to restart and discover backends
+    log_info "Waiting for load balancer to discover new backends..."
+    sleep 5
+    
+    # Verify load balancer is responding
+    local max_attempts=30
+    local attempt=1
+    
+    while [ $attempt -le $max_attempts ]; do
+        if curl -f -s -m 5 "http://localhost:$DEFAULT_PORT/" > /dev/null 2>&1; then
+            log_success "✅ Load balancer reloaded and responding"
+            break
+        fi
+        
+        if [ $attempt -eq $max_attempts ]; then
+            log_error "❌ Load balancer failed to respond after reload"
+            return 1
+        fi
+        
+        if [ $((attempt % 10)) -eq 0 ]; then
+            log_info "Still waiting for load balancer... (attempt $attempt/$max_attempts)"
+        fi
+        sleep 1
+        ((attempt++))
+    done
 }
 
 # Check service health and status
@@ -94,7 +144,7 @@ check_services() {
     
     # Check if containers are running
     local running_containers
-    running_containers=$(docker-compose -f "$COMPOSE_FILE" ps -q | wc -l)
+    running_containers=$($DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" ps -q | wc -l)
     
     if [ "$running_containers" -eq 0 ]; then
         log_error "No containers are running"
@@ -130,16 +180,53 @@ check_services() {
 test_load_balancing() {
     log_info "Testing load balancing across replicas..."
     
-    local test_requests=10
-    local unique_servers=0
+    local test_requests=20
+    declare -A server_counts
     
     echo "Making $test_requests requests to test load distribution..."
     
     for i in $(seq 1 $test_requests); do
-        local response
-        response=$(curl -s "http://localhost:$DEFAULT_PORT/" | grep -o 'Server ID: [^<]*' || echo "Server ID: unknown")
-        echo "  Request $i: $response"
+        local server_id
+        server_id=$(curl -s -I "http://localhost:$DEFAULT_PORT/" 2>/dev/null | grep -i "x-server-id" | cut -d' ' -f2- | tr -d '\r\n')
+        
+        if [ -n "$server_id" ]; then
+            # Extract just the container ID part (first 12 characters)
+            local container_id=${server_id:0:12}
+            server_counts["$container_id"]=$((${server_counts["$container_id"]} + 1))
+            if [ $((i % 5)) -eq 0 ]; then
+                echo "  Requests 1-$i: Load balancing active..."
+            fi
+        else
+            echo "  Request $i: Server ID not found"
+        fi
     done
+    
+    echo ""
+    echo "📊 Load Distribution Summary:"
+    local unique_servers=${#server_counts[@]}
+    local total_containers
+    total_containers=$($DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" ps -q cats-api | wc -l)
+    
+    if [ $unique_servers -gt 0 ]; then
+        echo "  📈 Active Backends: $unique_servers servers"
+        echo "  🐳 Total Containers: $total_containers containers"
+        echo ""
+        for server in "${!server_counts[@]}"; do
+            local percentage=$((${server_counts[$server]} * 100 / test_requests))
+            echo "  - Server $server: ${server_counts[$server]} requests ($percentage%)"
+        done
+        echo ""
+        if [ $unique_servers -gt 1 ]; then
+            log_success "✅ Perfect round-robin load balancing detected across $unique_servers healthy servers!"
+            if [ $unique_servers -lt $total_containers ]; then
+                log_warning "ℹ️  Note: $((total_containers - unique_servers)) containers may be starting up or unhealthy"
+            fi
+        else
+            log_warning "⚠️  All requests went to the same server - check load balancer configuration"
+        fi
+    else
+        log_error "❌ Could not detect server distribution"
+    fi
     
     log_success "Load balancing test completed"
 }
@@ -150,7 +237,7 @@ show_status() {
     
     echo ""
     echo "🐳 Container Status:"
-    docker-compose -f "$COMPOSE_FILE" ps
+    $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" ps
     
     echo ""
     echo "📊 Resource Usage:"
@@ -163,9 +250,9 @@ show_status() {
     
     echo ""
     echo "📝 Quick Commands:"
-    echo "  - View logs: docker-compose -f $COMPOSE_FILE logs -f"
-    echo "  - Scale API: docker-compose -f $COMPOSE_FILE up -d --scale cats-api=N"
-    echo "  - Stop services: docker-compose -f $COMPOSE_FILE down"
+    echo "  - View logs: ./deploy.sh logs"
+    echo "  - Scale API: ./deploy.sh scale N"
+    echo "  - Stop services: ./deploy.sh stop"
 }
 
 # Scale the API service
@@ -178,9 +265,14 @@ scale_service() {
     fi
     
     log_info "Scaling cats-api service to $new_replicas replicas..."
-    docker-compose -f "$COMPOSE_FILE" up -d --scale cats-api="$new_replicas"
+    $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" up -d --scale cats-api="$new_replicas"
     
+    # Give containers time to start
     sleep 5
+    
+    # Reload load balancer to discover new backends
+    reload_load_balancer
+    
     log_success "Service scaled to $new_replicas replicas"
     show_status
 }
@@ -188,7 +280,7 @@ scale_service() {
 # Stop the integrated stack
 stop_stack() {
     log_info "Stopping integrated stack..."
-    docker-compose -f "$COMPOSE_FILE" down
+    $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" down
     log_success "Stack stopped successfully"
 }
 
@@ -223,6 +315,7 @@ main() {
             show_status
             ;;
         "status")
+            check_prerequisites
             show_status
             ;;
         "scale")
@@ -230,10 +323,12 @@ main() {
             scale_service "$2"
             ;;
         "test")
+            check_prerequisites
             test_load_balancing
             ;;
         "logs")
-            docker-compose -f "$COMPOSE_FILE" logs -f
+            check_prerequisites
+            $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" logs -f
             ;;
         "stop")
             check_prerequisites

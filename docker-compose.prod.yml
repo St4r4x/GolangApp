@@ -7,14 +7,17 @@
 # - Production-ready settings with health checks and resource limits
 # =============================================================================
 
-version: "3.8"
-
 services:
   # =============================================================================
   # Cats API Service - Main Application Backend
   # =============================================================================
   cats-api:
-    image: ghcr.io/st4r4x/golangapp/cats-api:latest
+    build:
+      context: ./projects/cats-api
+      dockerfile: Dockerfile
+      target: runtime
+    # Uncomment below for registry images in production:
+    # image: ghcr.io/st4r4x/golangapp/cats-api:latest
     expose:
       - "8080"
     environment:
@@ -59,7 +62,11 @@ services:
   # Reverse Proxy Service - Load Balancer & Entry Point
   # =============================================================================
   reverse-proxy:
-    image: ghcr.io/st4r4x/golangapp/reverse-proxy:latest
+    build:
+      context: ./projects/reverse-proxy
+      dockerfile: Dockerfile
+    # Uncomment below for registry images in production:
+    # image: ghcr.io/st4r4x/golangapp/reverse-proxy:latest
     ports:
       - "4443:8080" # External port 4443 maps to internal 8080
     depends_on:
