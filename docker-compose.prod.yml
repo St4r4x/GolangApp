@@ -7,7 +7,7 @@
 # - Production-ready settings with health checks and resource limits
 # =============================================================================
 
-version: '3.8'
+version: "3.8"
 
 services:
   # =============================================================================
@@ -22,14 +22,22 @@ services:
       - ENV=production
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
     deploy:
       mode: replicated
-      replicas: 5  # High availability with 5 replicas
+      replicas: 5 # High availability with 5 replicas
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -53,7 +61,7 @@ services:
   reverse-proxy:
     image: ghcr.io/st4r4x/golangapp/reverse-proxy:latest
     ports:
-      - "4443:8080"  # External port 4443 maps to internal 8080
+      - "4443:8080" # External port 4443 maps to internal 8080
     depends_on:
       - cats-api
     restart: unless-stopped
@@ -62,7 +70,15 @@ services:
       - BACKEND_PORT=8080
       - PROXY_PORT=8080
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
