@@ -106,39 +106,6 @@ jobs:
             mocked-coverage.out
             main-coverage.out
 
-  coverage-report:
-    name: 📊 Coverage Analysis
-    runs-on: ubuntu-latest
-    needs: [unit-tests]
-    defaults:
-      run:
-        working-directory: ${{ env.WORKING_DIR }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download coverage artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: test-coverage
-
-      - name: Display coverage summary
-        run: |
-          echo "## 📊 Final Coverage Report" >> $GITHUB_STEP_SUMMARY
-          if [ -f "coverage.out" ]; then
-            go tool cover -func=coverage.out | tail -1 | awk '{print "**Total Coverage:** " $3}' >> $GITHUB_STEP_SUMMARY
-            echo "Coverage report available in artifacts" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Coverage file not found" >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: |
-            coverage.out
-            coverage.html
-
   versioning:
     name: 📋 Version Management
     runs-on: ubuntu-latest
@@ -181,7 +148,7 @@ jobs:
           echo "- **Tag:** $imageTag" >> $GITHUB_STEP_SUMMARY
 
   build-and-push:
-    name: 🐳 Build & Push Docker Image
+    name: 🐳 Build & Push Docker Images
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -207,18 +174,29 @@ jobs:
           repo_name=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "name=$repo_name" >> $GITHUB_OUTPUT
 
-      - name: Extract metadata
-        id: meta
+      - name: Extract metadata for cats-api
+        id: meta-api
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}
+          images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}/cats-api
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push Docker image
+      - name: Extract metadata for reverse-proxy
+        id: meta-proxy
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}/reverse-proxy
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push cats-api image
         uses: docker/build-push-action@v5
         with:
           context: projects/cats-api
@@ -227,19 +205,35 @@ jobs:
           tags: |
             ${{ needs.versioning.outputs.imageName }}
             ${{ needs.versioning.outputs.imageTag }}
-          labels: ${{ steps.meta.outputs.labels }}
+          labels: ${{ steps.meta-api.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=cats-api
+          cache-to: type=gha,mode=max,scope=cats-api
+
+      - name: Build and push reverse-proxy image
+        uses: docker/build-push-action@v5
+        with:
+          context: projects/reverse-proxy
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}/reverse-proxy:${{ needs.versioning.outputs.version }}
+          labels: ${{ steps.meta-proxy.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha,scope=reverse-proxy
+          cache-to: type=gha,mode=max,scope=reverse-proxy
           build-args: |
             VERSION=${{ needs.versioning.outputs.version }}
             BUILD_TIME=${{ github.run_id }}
 
       - name: Update step summary
         run: |
-          echo "## 🐳 Docker Image Built Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "## 🐳 Docker Images Built Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "### 🐱 Cats API Service" >> $GITHUB_STEP_SUMMARY
           echo "- **Image:** ${{ needs.versioning.outputs.imageName }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tag:** ${{ needs.versioning.outputs.imageTag }}" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔄 Reverse Proxy Service" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}/reverse-proxy" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag:** ${{ needs.versioning.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Port:** 4443 (External) → 8080 (Internal)" >> $GITHUB_STEP_SUMMARY
 
   api-tests:
     name: 🌐 API Tests
@@ -351,8 +345,8 @@ jobs:
   deployment-ready:
     name: ✅ Deployment Ready
     runs-on: ubuntu-latest
-    needs: [api-tests, coverage-report, security-scan, versioning]
-    if: always() && (needs.api-tests.result == 'success' && needs.coverage-report.result == 'success')
+    needs: [api-tests, unit-tests, security-scan, versioning]
+    if: always() && (needs.api-tests.result == 'success' && needs.unit-tests.result == 'success')
     permissions:
       contents: write
 
