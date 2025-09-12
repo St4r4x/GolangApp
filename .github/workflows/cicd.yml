@@ -58,7 +58,7 @@ jobs:
           fi
 
   unit-tests:
-    name: 🧪 Unit Tests
+    name: 🧪 Unit & Integration Tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -74,106 +74,62 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Run unit tests
+      - name: Run all tests with coverage
         run: |
-          echo "## 🧪 Running Unit Tests" >> $GITHUB_STEP_SUMMARY
-          if [ -d "./test/unit" ]; then
-            go test -v ./test/unit/... -coverprofile=unit-coverage.out || echo "No unit tests found"
-          else
-            echo "No unit test directory found"
-            touch unit-coverage.out
-          fi
+          echo "## 🧪 Running All Tests with Coverage" >> $GITHUB_STEP_SUMMARY
 
-      - name: Run mocked tests
-        run: |
-          echo "## 🎭 Running Mocked Tests" >> $GITHUB_STEP_SUMMARY
-          if [ -d "./test/mocked" ]; then
-            go test -v ./test/mocked/... -coverprofile=mocked-coverage.out || echo "No mocked tests found"
-          else
-            echo "No mocked test directory found"
-            touch mocked-coverage.out
-          fi
+          # Run comprehensive test suite with coverage
+          go test -coverprofile=coverage.out -v \
+            ./test/unit/... ./test/integration/... ./test/mocked/... . \
+            -coverpkg=./...
 
-      - name: Run main package tests
-        run: |
-          echo "## 📦 Running Main Package Tests" >> $GITHUB_STEP_SUMMARY
-          go test -v . -coverprofile=main-coverage.out
+          # Generate coverage report
+          go tool cover -html=coverage.out -o coverage.html
+          COVERAGE=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}')
+          echo "**Total Coverage:** $COVERAGE" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload unit test coverage
+          # Generate individual coverage files for artifact compatibility
+          go test -coverprofile=unit-coverage.out ./test/unit/... || touch unit-coverage.out
+          go test -coverprofile=integration-coverage.out ./test/integration/... || touch integration-coverage.out
+          go test -coverprofile=mocked-coverage.out ./test/mocked/... || touch mocked-coverage.out
+          go test -coverprofile=main-coverage.out . || touch main-coverage.out
+
+      - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: unit-coverage
+          name: test-coverage
           path: |
+            coverage.out
+            coverage.html
             unit-coverage.out
+            integration-coverage.out
             mocked-coverage.out
             main-coverage.out
-
-  integration-tests:
-    name: 🔗 Integration Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ env.WORKING_DIR }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Install dependencies
-        run: go mod download
-
-      - name: Run integration tests
-        run: |
-          echo "## 🔗 Running Integration Tests" >> $GITHUB_STEP_SUMMARY
-          if [ -d "./test/integration" ]; then
-            go test -v ./test/integration/... -coverprofile=integration-coverage.out || echo "No integration tests found"
-          else
-            echo "No integration test directory found"
-            touch integration-coverage.out
-          fi
-
-      - name: Upload integration test coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: integration-coverage
-          path: integration-coverage.out
 
   coverage-report:
     name: 📊 Coverage Analysis
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests]
+    needs: [unit-tests]
     defaults:
       run:
         working-directory: ${{ env.WORKING_DIR }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Install dependencies
-        run: go mod download
-
       - name: Download coverage artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: "*-coverage*"
-          merge-multiple: true
+          name: test-coverage
 
-      - name: Generate comprehensive coverage report
+      - name: Display coverage summary
         run: |
-          echo "## 📊 Generating Comprehensive Coverage Report" >> $GITHUB_STEP_SUMMARY
-          echo "ℹ️ Excluding API tests from coverage (they run separately with live server)" >> $GITHUB_STEP_SUMMARY
-          go test -coverprofile=coverage.out -v \
-            ./test/unit/... ./test/integration/... ./test/mocked/... . \
-            -coverpkg=./...
-          go tool cover -html=coverage.out -o coverage.html
-          go tool cover -func=coverage.out | tail -1 | awk '{print "**Total Coverage:** " $3}' >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Final Coverage Report" >> $GITHUB_STEP_SUMMARY
+          if [ -f "coverage.out" ]; then
+            go tool cover -func=coverage.out | tail -1 | awk '{print "**Total Coverage:** " $3}' >> $GITHUB_STEP_SUMMARY
+            echo "Coverage report available in artifacts" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Coverage file not found" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -230,7 +186,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: [lint-and-format, unit-tests, integration-tests, versioning]
+    needs: [lint-and-format, unit-tests, versioning]
 
     steps:
       - uses: actions/checkout@v4
